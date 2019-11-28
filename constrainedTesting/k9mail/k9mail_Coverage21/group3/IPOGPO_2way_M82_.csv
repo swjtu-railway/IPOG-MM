@@ -1,0 +1,6 @@
+[coverage strength]
+2
+""
+UnifiedInbox_select_Email_list,ComposeEmail_type_To,Home_click_Accounts_menu,Home_click_Check_email_menu,Home_click_Compose_menu,ComposeEmail_click_Save_as_draft_meu,ReadMail_scroll_UpUp,ComposeEmail_click_Add_Attachement_menu,AddingAttachement_goBack,ReplyEmail_click_Save_as_draft_meu,ReadEndMail_click_Forward_btn,ReadMail_click_Delete_btn
+2,not an email,action,action,action,action,action,action,action,action,action,action
+3,cunduy@email.com,action,action,action,action,action,action,action,action,action,action

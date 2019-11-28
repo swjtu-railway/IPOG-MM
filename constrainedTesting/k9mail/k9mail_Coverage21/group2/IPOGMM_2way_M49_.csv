@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+ReplyEmail_click_Send_menu,Home_click_Batch_Ops_menu,UnifiedInbox_select_Email_list,SelectBatchOps_click_Clear_all_selections,ReadMail_click_Previous_btn,ReadMail_scroll_UpUp,ReplyEmail_click_Save_as_draft_meu,ReadMail_click_Delete_btn,ReadEndMail_click_Reply_btn,ReadMail_click_Star_btn,ReadEndMail_click_ReplyAll_btn
+action,action,1,action,action,action,action,action,action,action,action

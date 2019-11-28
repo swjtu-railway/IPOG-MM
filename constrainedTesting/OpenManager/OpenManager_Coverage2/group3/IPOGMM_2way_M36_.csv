@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+S8_select_Application_backup,S10_goBack,S0_click_Tool_Box_image_button
+action,action,action

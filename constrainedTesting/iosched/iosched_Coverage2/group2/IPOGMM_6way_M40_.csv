@@ -1,0 +1,19 @@
+[coverage strength]
+6
+""
+SESSIONS_select_Sessions_list,SESSIONSDETAILS_select_Talk_list,DASHBOARD_click_Sessions_btn,TALKDETAILS_click_Map_menu_btn,DASHBOARD_click_Schedule_btn,DASHBOARD_click_Schedule_btn
+0,0,action,action,action,action
+0,1,action,action,action,action
+0,2,action,action,action,action
+0,3,action,action,action,action
+1,1,action,action,action,action
+1,2,action,action,action,action
+1,3,action,action,action,action
+2,0,action,action,action,action
+2,1,action,action,action,action
+2,2,action,action,action,action
+2,3,action,action,action,action
+3,0,action,action,action,action
+3,1,action,action,action,action
+3,2,action,action,action,action
+3,3,action,action,action,action

@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+S3_select_schedulingTypeSelect_index_1,S5_select_schedulingTypeSelect_index_2,S6_submit_submitButton,S2_type_amount,S1_wait_input,S16_click_cssInputButton,S17_click_payNowButton,S0_type_memberUserName
+IMMEDIATELY,SINGLE_FUTURE,action,invalidAmountRight,action,action,action,test1

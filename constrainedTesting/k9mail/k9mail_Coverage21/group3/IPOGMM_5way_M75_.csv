@@ -1,0 +1,5 @@
+[coverage strength]
+5
+""
+UnifiedInbox_click_Compose_menu,ComposeEmail_click_Add_CcBcc_menu,ComposeEmail_click_Save_as_draft_meu,ComposeEmail_type_Message_text,Home_click_Batch_Ops_menu,SelectBatchOps_click_Clear_all_selections
+action,action,action,validName,action,action

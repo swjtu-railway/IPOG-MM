@@ -1,0 +1,8 @@
+[coverage strength]
+2
+""
+UnifiedInbox_select_Email_list,ReplyEmail_type_Message_text,SelectBatchOps_click_Clear_all_selections,ReadMail_scroll_UpUp,AddingAttachement_goBack,ReplyEmail_click_Add_Attachement_menu,ReadEndMail_click_ReplyAll_btn,Home_click_Batch_Ops_menu,ReplyEmail_click_Add_CcBcc_menu
+0,validName,action,action,action,action,action,action,action
+1,validName,action,action,action,action,action,action,action
+2,validName,action,action,action,action,action,action,action
+3,validName,action,action,action,action,action,action,action

@@ -1,0 +1,8 @@
+[coverage strength]
+3
+""
+UnifiedInbox_select_Email_list,ComposeEmail_click_Save_as_draft_meu,Home_click_Batch_Ops_menu,SelectBatchOps_click_Clear_all_selections,UnifiedInbox_click_Compose_menu,ReadMail_click_Previous_btn,ReadMail_click_Next_btn,ReadMail_scroll_UpUp
+0,action,action,action,action,action,action,action
+1,action,action,action,action,action,action,action
+2,action,action,action,action,action,action,action
+3,action,action,action,action,action,action,action

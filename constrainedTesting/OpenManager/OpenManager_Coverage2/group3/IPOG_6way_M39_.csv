@@ -1,0 +1,6 @@
+[coverage strength]
+6
+""
+S16_type_name_2,S0_longClick_Folder_list_0,S14_click_Rename_Folder_list_1
+good,action,action
+bad,action,action

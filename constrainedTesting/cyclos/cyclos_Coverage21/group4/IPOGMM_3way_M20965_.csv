@@ -1,0 +1,4 @@
+[coverage strength]
+3
+""
+S0_type_memberUserName,S16_click_cssInputButton,S1_wait_input,S2_type_amount,S17_click_payNowButton,S6_type_scheduleForText,S7_select_schedulingTypeSelect_index_1,S5_select_schedulingTypeSelect_index_2,S5_select_schedulingTypeSelect_index_3,S3_select_schedulingTypeSelect_index_3,S9_submit_submitButton

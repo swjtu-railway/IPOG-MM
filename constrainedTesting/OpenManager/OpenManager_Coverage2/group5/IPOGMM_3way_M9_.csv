@@ -1,0 +1,6 @@
+[coverage strength]
+3
+""
+S3_type_name_1,S0_click_Search_menu,S0_click_home_image_button
+good,action,action
+bad,action,action

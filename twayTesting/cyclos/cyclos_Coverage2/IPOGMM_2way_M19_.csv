@@ -1,0 +1,7 @@
+[coverage strength]
+2
+""
+S2_type_amount,S17_click_payNowButton,S3_select_schedulingTypeSelect_index_2,S1_wait_input,S6_submit_submitButton,S16_click_cssInputButton,S0_type_memberUserName
+invalidAmountRight,action,SINGLE_FUTURE,action,action,action,test1
+validAcceptableAmount,action,SINGLE_FUTURE,action,action,action,test1
+invalidAmountLeft,action,SINGLE_FUTURE,action,action,action,test1

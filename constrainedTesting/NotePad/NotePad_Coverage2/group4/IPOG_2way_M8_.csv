@@ -1,0 +1,7 @@
+[coverage strength]
+2
+""
+S0_select_note_0,S1_type_Keys_0,S5_click_Delete
+0,bad,action
+1,good,action
+1,bad,action

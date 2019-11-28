@@ -1,0 +1,6 @@
+[coverage strength]
+2
+""
+ComposeEmail_type_To,Home_click_Compose_menu
+cunduy@email.com,action
+not an email,action

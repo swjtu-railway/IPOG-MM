@@ -1,0 +1,8 @@
+[coverage strength]
+2
+""
+SESSIONSDETAILS_select_Talk_list,TALKDETAILS_click_Summary_tab,SESSIONS_select_Sessions_list,DASHBOARD_click_Sessions_btn
+0,action,0,action
+1,action,1,action
+2,action,2,action
+3,action,3,action

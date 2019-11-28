@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+UnifiedInbox_click_Compose_menu,ComposeEmail_click_Discard_menu,ComposeEmail_type_Subject,ComposeEmail_click_Add_CcBcc_menu,SelectBatchOps_click_Mark_selected_unread,UnifiedInboxSelected_click_Close_btn_3,Home_click_Batch_Ops_menu
+action,action,validName,action,action,action,action

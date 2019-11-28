@@ -1,0 +1,5 @@
+[coverage strength]
+6
+""
+Home_click_Accounts_menu,Home_click_About_menu,Home_click_All_messages,AllMessageInbox_goBack,Home_click_Add_account_menu,Home_click_Check_email_menu,About_goBack
+action,action,action,action,action,action,action

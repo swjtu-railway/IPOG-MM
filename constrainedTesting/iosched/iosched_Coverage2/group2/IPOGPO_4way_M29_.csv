@@ -1,0 +1,11 @@
+[coverage strength]
+4
+""
+SEARCH_select_Keyword_list,SCHEDULE_click_Search_btn,DASHBOARD_click_Schedule_btn
+0,action,action
+1,action,action
+2,action,action
+3,action,action
+4,action,action
+5,action,action
+7,action,action

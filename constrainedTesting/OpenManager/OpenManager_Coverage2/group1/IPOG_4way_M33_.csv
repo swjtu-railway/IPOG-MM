@@ -1,0 +1,8 @@
+[coverage strength]
+4
+""
+S7_select_Sorting_type,S5_click_Sorting_type_dropdown_list,S0_click_Settings_menu
+None,action,action
+Alphabetical,action,action
+Type,action,action
+Size,action,action

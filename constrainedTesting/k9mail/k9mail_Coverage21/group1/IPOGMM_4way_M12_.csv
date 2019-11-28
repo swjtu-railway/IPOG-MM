@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+GmailInbox_goBack,Home_click_Compose_menu,ComposeEmail_type_Subject,ComposeEmail_click_Add_CcBcc_menu,Home_click_Accounts_menu,Home_click_All_messages,AllMessageInbox_goBack,Home_click_Check_email_menu,Home_click_Folder_Gmail
+action,action,validName,action,action,action,action,action,action

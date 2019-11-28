@@ -1,0 +1,11 @@
+[coverage strength]
+6
+""
+S2_type_amount,S6_type_scheduleForText,S9_submit_submitButton,S1_wait_input,S3_select_schedulingTypeSelect_index_1,S5_select_schedulingTypeSelect_index_2,S16_click_cssInputButton,S17_click_payNowButton,S0_type_memberUserName
+invalidAmountRight,invalidScheduleForFutureDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+invalidAmountRight,validScheduleForDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+invalidAmountRight,invalidScheduleForPastDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+validAcceptableAmount,invalidScheduleForPastDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+invalidAmountLeft,invalidScheduleForFutureDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+invalidAmountLeft,validScheduleForDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1
+invalidAmountLeft,invalidScheduleForPastDate,action,action,IMMEDIATELY,SINGLE_FUTURE,action,action,test1

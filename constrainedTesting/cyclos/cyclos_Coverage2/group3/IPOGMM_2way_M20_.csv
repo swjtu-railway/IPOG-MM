@@ -1,0 +1,7 @@
+[coverage strength]
+2
+""
+S6_type_scheduleForText,S8c2_submit_submitButton,S2_type_amount,S3_select_schedulingTypeSelect_index_2,S1_wait_input,S9_type_description,S0_type_memberUserName
+invalidScheduleForFutureDate,action,validAcceptableAmount,SINGLE_FUTURE,action,anyString,test1
+validScheduleForDate,action,invalidAmountLeft,SINGLE_FUTURE,action,anyString,test1
+invalidScheduleForPastDate,action,invalidAmountRight,SINGLE_FUTURE,action,anyString,test1

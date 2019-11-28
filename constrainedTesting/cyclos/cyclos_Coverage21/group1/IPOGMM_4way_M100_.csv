@@ -1,0 +1,6 @@
+[coverage strength]
+4
+""
+S2_type_amount,S3_submit_submitButton,S1_wait_input,S0_type_memberUserName,S15_click_cssInputButton
+validAcceptableAmount,action,action,test1,action
+invalidAmountLeft,action,action,test1,action

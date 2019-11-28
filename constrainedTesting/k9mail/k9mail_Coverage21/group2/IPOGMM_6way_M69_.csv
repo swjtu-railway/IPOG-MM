@@ -1,0 +1,7 @@
+[coverage strength]
+6
+""
+UnifiedInbox_select_Email_list,UnifiedInbox_click_Compose_menu,ComposeEmail_click_Discard_menu,ReadMail_scroll_UpUp,ReadMail_click_Star_btn,Home_click_Batch_Ops_menu,SelectBatchOps_click_Clear_all_selections
+1,action,action,action,action,action,action
+2,action,action,action,action,action,action
+3,action,action,action,action,action,action

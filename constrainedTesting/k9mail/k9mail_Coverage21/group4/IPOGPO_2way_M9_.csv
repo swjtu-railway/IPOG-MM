@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+Home_click_Accounts_menu,Home_click_About_menu,Home_click_All_messages,AllMessageInbox_goBack,Home_click_More_menu,About_goBack,HomeSettings_click_Settings_Import_Export_submenu,IESettings_click_Import_setting_list_1
+action,action,action,action,action,action,action,action

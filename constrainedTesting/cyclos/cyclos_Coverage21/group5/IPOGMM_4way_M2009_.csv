@@ -1,0 +1,8 @@
+[coverage strength]
+4
+""
+S7_type_paymentCount,S3_select_schedulingTypeSelect_index_3,S14_submit_submitButton,S11_click_calculatePaymentsButton,S2_type_amount,S10_type_firstPaymentDate,S1_wait_input,S18_click_cssInputButton,S0_type_memberUserName
+validPaymentCountBetween17and36,MULTIPLE_FUTURE,action,action,invalidAmountRight,invalidPaymentFutureDate,action,action,test1
+validPaymentCountBetween1and6,MULTIPLE_FUTURE,action,action,validAcceptableAmount,02/02/2012,action,action,test1
+invalidPaymentCountLef,MULTIPLE_FUTURE,action,action,invalidAmountLeft,invalidPaymentPastDate,action,action,test1
+invalidPaymentCountRight,MULTIPLE_FUTURE,action,action,invalidAmountRight,invalidPaymentPastDate,action,action,test1

@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+S7_select_schedulingTypeSelect_index_1,S0_type_memberUserName,S1_wait_input,S6_select_schedulingTypeSelect_index_3,S2_type_amount,S3_select_schedulingTypeSelect_index_1,S5_select_schedulingTypeSelect_index_2,S7_submit_submitButton,S5_select_schedulingTypeSelect_index_3
+IMMEDIATELY,test1,action,MULTIPLE_FUTURE,validAcceptableAmount,IMMEDIATELY,SINGLE_FUTURE,action,MULTIPLE_FUTURE

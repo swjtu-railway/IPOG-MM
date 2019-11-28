@@ -1,0 +1,10 @@
+[coverage strength]
+4
+""
+S6_select_Color,S5_click_Text_color_dropdown_list,S0_click_Settings_menu,S0_click_home_image_button
+White,action,action,action
+Yellow,action,action,action
+Red,action,action,action
+Cyan,action,action,action
+Blue,action,action,action
+Green,action,action,action

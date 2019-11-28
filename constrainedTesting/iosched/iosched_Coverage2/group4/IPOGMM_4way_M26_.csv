@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+DASHBOARD_click_Realtime_Stream_btn,REALTIME_click_Search_btn,DASHBOARD_click_Schedule_btn,DASHBOARD_click_Schedule_btn
+action,action,action,action

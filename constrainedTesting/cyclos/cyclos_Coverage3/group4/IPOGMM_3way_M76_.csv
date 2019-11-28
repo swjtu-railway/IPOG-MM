@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+S0_type_memberUserName,S1_wait_input,S2_type_amount,S10_click_calculatePaymentsButton,S14_submit_submitButton,S18_click_cssInputButton,S5_select_schedulingTypeSelect_index_3,S7_type_paymentCount,S3_select_schedulingTypeSelect_index_1
+test1,action,validAcceptableAmount,action,action,action,MULTIPLE_FUTURE,validPaymentCountBetween1and6,IMMEDIATELY

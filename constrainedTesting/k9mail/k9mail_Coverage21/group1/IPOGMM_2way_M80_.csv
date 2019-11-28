@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+Home_click_Unified_Inbox,ReplyEmail_click_Add_CcBcc_menu,UnifiedInbox_select_Email_list,Home_click_Accounts_menu,ReadMail_scroll_UpUp,AddingAttachement_goBack,ReadEndMail_click_Reply_btn,ReplyEmail_click_Add_Attachement_menu
+action,action,0,action,action,action,action,action

@@ -1,0 +1,7 @@
+[coverage strength]
+3
+""
+SESSIONS_select_Sessions_list,DASHBOARD_click_Sessions_btn,SESSIONSDETAILS_click_Search_btn
+1,action,action
+2,action,action
+3,action,action

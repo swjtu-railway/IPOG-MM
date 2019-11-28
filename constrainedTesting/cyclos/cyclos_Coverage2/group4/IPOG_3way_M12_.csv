@@ -1,0 +1,6 @@
+[coverage strength]
+3
+""
+S2_type_amount,S7_select_schedulingTypeSelect_index_1,S3_select_schedulingTypeSelect_index_3,S1_wait_input,S0_type_memberUserName
+validAcceptableAmount,IMMEDIATELY,MULTIPLE_FUTURE,action,test1
+invalidAmountLeft,IMMEDIATELY,MULTIPLE_FUTURE,action,test1

@@ -1,0 +1,5 @@
+[coverage strength]
+6
+""
+GmailInbox_goBack,ComposeEmail_click_Add_Attachement_menu,AddingAttachement_goBack,ComposeEmail_type_Message_text,About_goBack,Home_click_Unified_Inbox,Home_click_Accounts_menu,Home_click_About_menu,UnifiedInbox_click_Compose_menu,Home_click_Folder_Gmail
+action,action,action,validName,action,action,action,action,action,action

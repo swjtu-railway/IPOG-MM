@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+SelectBatchOps_click_Clear_all_selections,UnifiedInbox_click_Compose_menu,ComposeEmail_click_Add_Attachement_menu,AddingAttachement_goBack,ReplyEmail_click_Save_as_draft_meu,Home_click_Batch_Ops_menu
+action,action,action,action,action,action

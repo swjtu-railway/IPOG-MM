@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+ComposeEmail_click_Add_Attachement_menu,ReplyEmail_click_Add_CcBcc_menu,UnifiedInbox_click_Compose_menu,SelectBatchOps_click_Mark_selected_unread,AddingAttachement_goBack,UnifiedInboxSelected_click_Close_btn_3,UnifiedInboxSelected_click_AllStar_btn_2,UnifiedInbox_click_Select_all_menu,Home_click_Batch_Ops_menu
+action,action,action,action,action,action,action,action,action

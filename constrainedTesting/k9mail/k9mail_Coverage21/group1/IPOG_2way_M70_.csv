@@ -1,0 +1,7 @@
+[coverage strength]
+2
+""
+UnifiedInbox_select_Email_list,Home_click_Accounts_menu,UnifiedInbox_click_Compose_menu,ComposeEmail_click_Discard_menu,Home_click_Compose_menu,UnifiedInboxSelected_click_Close_btn_3,UnifiedInboxSelected_click_AllStar_btn_2,ComposeEmail_type_Message_text,ComposeEmail_click_Send_menu,UnifiedInbox_click_Select_all_menu
+0,action,action,action,action,action,action,validName,action,action
+2,action,action,action,action,action,action,validName,action,action
+3,action,action,action,action,action,action,validName,action,action

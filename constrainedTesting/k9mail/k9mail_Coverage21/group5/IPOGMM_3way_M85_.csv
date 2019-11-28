@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+Home_click_Check_email_menu,GmailInbox_goBack,Home_click_More_menu,Home_click_Accounts_menu,Home_click_All_messages,AllMessageInbox_goBack,Home_click_Folder_Gmail
+action,action,action,action,action,action,action

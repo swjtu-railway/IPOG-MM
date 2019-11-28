@@ -1,0 +1,7 @@
+[coverage strength]
+2
+""
+UnifiedInbox_select_Email_list,AllMessageInbox_goBack,Home_click_Accounts_menu,Home_click_All_messages,ReadMail_click_Previous_btn,ReadMail_click_Next_btn,ReadMail_click_Delete_btn,Home_click_Unified_Inbox,ReadMail_click_Star_btn
+1,action,action,action,action,action,action,action,action
+2,action,action,action,action,action,action,action,action
+3,action,action,action,action,action,action,action,action

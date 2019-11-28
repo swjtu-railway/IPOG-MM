@@ -1,0 +1,8 @@
+[coverage strength]
+4
+""
+UnifiedInbox_select_Email_list,SelectBatchOps_click_Clear_all_selections,ComposeEmail_type_Message_text,Home_click_Batch_Ops_menu,ReadMail_scroll_UpUp,ReadEndMail_click_Forward_btn
+0,action,validName,action,action,action
+1,action,validName,action,action,action
+2,action,validName,action,action,action
+3,action,validName,action,action,action

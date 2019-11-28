@@ -1,0 +1,7 @@
+[coverage strength]
+3
+""
+S2_type_amount,S3_select_schedulingTypeSelect_index_1,S5_type_description,S8c1_submit_submitButton,S1_wait_input,S0_type_memberUserName
+invalidAmountRight,IMMEDIATELY,anyString,action,action,test1
+validAcceptableAmount,IMMEDIATELY,anyString,action,action,test1
+invalidAmountLeft,IMMEDIATELY,anyString,action,action,test1

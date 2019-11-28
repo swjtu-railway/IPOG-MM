@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+STARRED_click_Sessions_tab,SCHEDULE_scroll_Down,DASHBOARD_click_Starred_btn,DASHBOARD_click_Schedule_btn,SCHEDULE_go_Back
+action,action,action,action,action

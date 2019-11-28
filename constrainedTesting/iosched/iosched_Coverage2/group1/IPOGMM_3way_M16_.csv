@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+DASHBOARD_click_Sessions_btn,SESSIONS_click_Home_btn,DASHBOARD_click_Schedule_btn
+action,action,action

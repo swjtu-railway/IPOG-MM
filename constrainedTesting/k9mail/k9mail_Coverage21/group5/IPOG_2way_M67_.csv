@@ -1,0 +1,12 @@
+[coverage strength]
+2
+""
+UnifiedInbox_select_Email_list,ComposeEmail_type_To,Home_click_Accounts_menu,ReadMail_click_Previous_btn,ReadMail_click_Next_btn,ReadMail_scroll_UpUp,ReadEndMail_click_Forward_btn,Home_click_Unified_Inbox,ReadMail_click_Star_btn
+0,cunduy@email.com,action,action,action,action,action,action,action
+0,not an email,action,action,action,action,action,action,action
+1,cunduy@email.com,action,action,action,action,action,action,action
+1,not an email,action,action,action,action,action,action,action
+2,cunduy@email.com,action,action,action,action,action,action,action
+2,not an email,action,action,action,action,action,action,action
+3,cunduy@email.com,action,action,action,action,action,action,action
+3,not an email,action,action,action,action,action,action,action

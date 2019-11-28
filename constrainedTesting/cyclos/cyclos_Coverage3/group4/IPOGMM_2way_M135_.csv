@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+S8c2_submit_submitButton,S6_select_schedulingTypeSelect_index_1,S2_type_amount,S6_type_scheduleForText,S3_select_schedulingTypeSelect_index_2,S1_wait_input,S5_select_schedulingTypeSelect_index_2,S9_type_description,S16_click_cssInputButton,S17_click_payNowButton,S0_type_memberUserName
+action,IMMEDIATELY,validAcceptableAmount,invalidScheduleForPastDate,SINGLE_FUTURE,action,SINGLE_FUTURE,anyString,action,action,test1

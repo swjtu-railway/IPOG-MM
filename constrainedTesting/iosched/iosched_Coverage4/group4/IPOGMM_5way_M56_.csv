@@ -1,0 +1,5 @@
+[coverage strength]
+5
+""
+SCHEDULE_click_Office_hours,DASHBOARD_click_Map_btn,MAP_click_Home_btn,DASHBOARD_click_Schedule_btn,DASHBOARD_click_Schedule_btn
+1,action,action,action,action

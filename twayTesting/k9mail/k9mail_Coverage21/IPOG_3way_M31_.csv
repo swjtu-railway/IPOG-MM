@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+Home_click_Accounts_menu,Home_click_Search_menu,SearchEmail_click_Go,Home_click_More_menu,HomeSettings_click_Settings_Import_Export_submenu,IESettings_click_Import_setting_list_1
+action,action,action,action,action,action

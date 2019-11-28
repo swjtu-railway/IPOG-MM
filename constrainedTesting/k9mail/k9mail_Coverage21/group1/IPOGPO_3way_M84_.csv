@@ -1,0 +1,5 @@
+[coverage strength]
+3
+""
+Home_click_Accounts_menu,Home_click_Search_menu,SearchEmail_click_Go,SearchEmail_type_Keyword
+action,action,action,validName

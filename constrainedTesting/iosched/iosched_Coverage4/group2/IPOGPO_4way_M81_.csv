@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+SCHEDULE_click_Office_hours,SCHEDULE_click_Whaton,SCHEDULE_click_Previous_Arrows,SCHEDULE_scroll_Up,DASHBOARD_click_Schedule_btn
+1,action,action,action,action

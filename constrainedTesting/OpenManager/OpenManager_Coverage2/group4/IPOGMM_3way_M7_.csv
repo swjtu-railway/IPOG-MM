@@ -1,0 +1,6 @@
+[coverage strength]
+3
+""
+S2_type_name_0,S0_click_New_Directory_menu,S0_click_home_image_button
+good,action,action
+bad,action,action

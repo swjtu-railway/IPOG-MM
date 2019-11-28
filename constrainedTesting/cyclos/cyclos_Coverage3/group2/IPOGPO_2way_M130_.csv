@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+S7_type_paymentCount,S2_type_amount,S10_type_firstPaymentDate,S1_wait_input,S3_select_schedulingTypeSelect_index_1,S5_select_schedulingTypeSelect_index_2,S6_select_schedulingTypeSelect_index_3,S14_submit_submitButton,S18_click_cssInputButton,S0_type_memberUserName,S11_click_calculatePaymentsButton
+invalidPaymentCountRight,invalidAmountLeft,02/02/2012,action,IMMEDIATELY,SINGLE_FUTURE,MULTIPLE_FUTURE,action,action,test1,action

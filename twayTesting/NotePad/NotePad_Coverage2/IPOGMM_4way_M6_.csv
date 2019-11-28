@@ -1,0 +1,12 @@
+[coverage strength]
+4
+""
+S5_type_Keys_0,S0_select_note_0,S1_type_Keys_0,S0_long_click_note_0
+good,0,good,action
+good,0,bad,action
+good,1,good,action
+good,1,bad,action
+bad,0,good,action
+bad,0,bad,action
+bad,1,good,action
+bad,1,bad,action

@@ -1,0 +1,5 @@
+[coverage strength]
+2
+""
+S6_goBack,S0_click_Settings_menu,S5_click_Text_color_dropdown_list
+action,action,action

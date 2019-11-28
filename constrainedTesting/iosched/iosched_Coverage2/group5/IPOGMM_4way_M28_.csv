@@ -1,0 +1,5 @@
+[coverage strength]
+4
+""
+SEARCH_type_Keyword_o_textbox,SCHEDULE_click_Search_btn,DASHBOARD_click_Schedule_btn,DASHBOARD_click_Schedule_btn
+bad,action,action,action

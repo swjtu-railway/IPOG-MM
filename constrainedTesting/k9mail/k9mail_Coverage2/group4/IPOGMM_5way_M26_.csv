@@ -1,0 +1,5 @@
+[coverage strength]
+5
+""
+Home_click_Compose_menu,ComposeEmail_click_Add_Attachement_menu,AddingAttachement_goBack,ReplyEmail_type_Message_text,Home_click_Add_account_menu
+action,action,action,validName,action
