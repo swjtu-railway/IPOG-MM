@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BulletinFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">BulletinFragment.java</span></div><h1>BulletinFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import java.util.regex.Pattern;
+
+/**
+ * A fragment containing a {@link WebView} pointing to the I/O announcements URL.
+ */
+<span class="fc" id="L41">public class BulletinFragment extends Fragment {</span>
+
+<span class="fc" id="L43">    private static final Pattern sSiteUrlPattern = Pattern.compile(&quot;google\\.com\\/events\\/io&quot;);</span>
+    private static final String BULLETIN_URL =
+            &quot;http://www.google.com/events/io/2011/mobile_announcements.html&quot;;
+
+    private WebView mWebView;
+    private View mLoadingSpinner;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L52">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L53">        setHasOptionsMenu(true);</span>
+<span class="fc" id="L54">        AnalyticsUtils.getInstance(getActivity()).trackPageView(&quot;/Bulletin&quot;);</span>
+<span class="fc" id="L55">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+
+<span class="fc" id="L61">        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_webview_with_spinner, null);</span>
+
+        // For some reason, if we omit this, NoSaveStateFrameLayout thinks we are
+        // FILL_PARENT / WRAP_CONTENT, making the progress bar stick to the top of the activity.
+<span class="fc" id="L65">        root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,</span>
+                ViewGroup.LayoutParams.FILL_PARENT));
+
+<span class="fc" id="L68">        mLoadingSpinner = root.findViewById(R.id.loading_spinner);</span>
+<span class="fc" id="L69">        mWebView = (WebView) root.findViewById(R.id.webview);</span>
+<span class="fc" id="L70">        mWebView.setWebViewClient(mWebViewClient);</span>
+
+<span class="fc" id="L72">        mWebView.post(new Runnable() {</span>
+            public void run() {
+<span class="fc" id="L74">                mWebView.getSettings().setJavaScriptEnabled(true);</span>
+<span class="fc" id="L75">                mWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);</span>
+<span class="fc" id="L76">                mWebView.loadUrl(BULLETIN_URL);</span>
+<span class="fc" id="L77">            }</span>
+        });
+
+<span class="fc" id="L80">        return root;</span>
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+<span class="fc" id="L85">        super.onCreateOptionsMenu(menu, inflater);</span>
+<span class="fc" id="L86">        inflater.inflate(R.menu.refresh_menu_items, menu);</span>
+<span class="fc" id="L87">    }</span>
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_refresh) {</span>
+<span class="nc" id="L92">            mWebView.reload();</span>
+<span class="nc" id="L93">            return true;</span>
+        }
+<span class="nc" id="L95">        return super.onOptionsItemSelected(item);</span>
+    }
+
+<span class="fc" id="L98">    private WebViewClient mWebViewClient = new WebViewClient() {</span>
+        @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+<span class="fc" id="L101">            super.onPageStarted(view, url, favicon);</span>
+<span class="fc" id="L102">            mLoadingSpinner.setVisibility(View.VISIBLE);</span>
+<span class="fc" id="L103">            mWebView.setVisibility(View.INVISIBLE);</span>
+<span class="fc" id="L104">        }</span>
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+<span class="nc" id="L108">            super.onPageFinished(view, url);</span>
+<span class="nc" id="L109">            mLoadingSpinner.setVisibility(View.GONE);</span>
+<span class="nc" id="L110">            mWebView.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L111">        }</span>
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+<span class="nc bnc" id="L115" title="All 2 branches missed.">            if (sSiteUrlPattern.matcher(url).find()) {</span>
+<span class="nc" id="L116">                return false;</span>
+            }
+
+<span class="nc" id="L119">            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));</span>
+<span class="nc" id="L120">            startActivity(intent);</span>
+<span class="nc" id="L121">            return true;</span>
+        }
+    };
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

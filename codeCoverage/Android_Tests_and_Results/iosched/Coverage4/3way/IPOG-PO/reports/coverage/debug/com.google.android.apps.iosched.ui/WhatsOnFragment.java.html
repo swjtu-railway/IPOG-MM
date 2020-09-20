@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WhatsOnFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">WhatsOnFragment.java</span></div><h1>WhatsOnFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.ui.tablet.NowPlayingMultiPaneActivity;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import androidx.fragment.app.Fragment;
+import android.text.format.DateUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+/**
+ * A fragment used in {@link HomeActivity} that shows either a countdown, 'now playing' link to
+ * current sessions, or 'thank you' text, at different times (before/during/after the conference).
+ * It also shows a 'Realtime Search' button on phones, as a replacement for the
+ * {@link TagStreamFragment} that is visible on tablets on the home screen.
+ */
+<span class="fc" id="L42">public class WhatsOnFragment extends Fragment {</span>
+
+<span class="fc" id="L44">    private Handler mMessageHandler = new Handler();</span>
+
+    private TextView mCountdownTextView;
+    private ViewGroup mRootView;
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+<span class="fc" id="L52">        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_whats_on, container);</span>
+<span class="fc" id="L53">        refresh();</span>
+<span class="fc" id="L54">        return mRootView;</span>
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+<span class="fc" id="L59">        super.onAttach(activity);</span>
+<span class="fc" id="L60">    }</span>
+
+    @Override
+    public void onDetach() {
+<span class="fc" id="L64">        super.onDetach();</span>
+<span class="fc" id="L65">        mMessageHandler.removeCallbacks(mCountdownRunnable);</span>
+<span class="fc" id="L66">    }</span>
+
+    private void refresh() {
+<span class="fc" id="L69">        mMessageHandler.removeCallbacks(mCountdownRunnable);</span>
+<span class="fc" id="L70">        mRootView.removeAllViews();</span>
+
+<span class="fc" id="L72">        final long currentTimeMillis = UIUtils.getCurrentTime(getActivity());</span>
+
+        // Show Loading... and load the view corresponding to the current state
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (currentTimeMillis &lt; UIUtils.CONFERENCE_START_MILLIS) {</span>
+<span class="nc" id="L76">            setupBefore();</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">        } else if (currentTimeMillis &gt; UIUtils.CONFERENCE_END_MILLIS) {</span>
+<span class="nc" id="L78">            setupAfter();</span>
+        } else {
+<span class="fc" id="L80">            setupDuring();</span>
+        }
+
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        if (!UIUtils.isHoneycombTablet(getActivity())) {</span>
+<span class="fc" id="L84">            View separator = new View(getActivity());</span>
+<span class="fc" id="L85">            separator.setLayoutParams(</span>
+                    new ViewGroup.LayoutParams(1, ViewGroup.LayoutParams.FILL_PARENT));
+<span class="fc" id="L87">            separator.setBackgroundResource(R.drawable.whats_on_separator);</span>
+<span class="fc" id="L88">            mRootView.addView(separator);</span>
+
+<span class="fc" id="L90">            View view = getActivity().getLayoutInflater().inflate(</span>
+                    R.layout.whats_on_stream, mRootView, false);
+<span class="fc" id="L92">            view.setOnClickListener(new View.OnClickListener() {</span>
+                public void onClick(View view) {
+<span class="fc" id="L94">                    AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+                            &quot;Home Screen Dashboard&quot;, &quot;Click&quot;, &quot;Realtime Stream&quot;, 0);
+<span class="fc" id="L96">                    Intent intent = new Intent(getActivity(), TagStreamActivity.class);</span>
+<span class="fc" id="L97">                    startActivity(intent);</span>
+<span class="fc" id="L98">                }</span>
+            });
+<span class="fc" id="L100">            mRootView.addView(view);</span>
+        }
+<span class="fc" id="L102">    }</span>
+
+    private void setupBefore() {
+        // Before conference, show countdown.
+<span class="nc" id="L106">        mCountdownTextView = (TextView) getActivity().getLayoutInflater().inflate(</span>
+                R.layout.whats_on_countdown, mRootView, false);
+<span class="nc" id="L108">        mRootView.addView(mCountdownTextView);</span>
+<span class="nc" id="L109">        mMessageHandler.post(mCountdownRunnable);</span>
+<span class="nc" id="L110">    }</span>
+
+    private void setupAfter() {
+        // After conference, show canned text.
+<span class="nc" id="L114">        getActivity().getLayoutInflater().inflate(</span>
+                R.layout.whats_on_thank_you, mRootView, true);
+<span class="nc" id="L116">    }</span>
+
+    private void setupDuring() {
+        // Conference in progress, show &quot;Now Playing&quot; link.
+<span class="fc" id="L120">        View view = getActivity().getLayoutInflater().inflate(</span>
+                R.layout.whats_on_now_playing, mRootView, false);
+<span class="fc" id="L122">        view.setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                if (UIUtils.isHoneycombTablet(getActivity())) {</span>
+<span class="nc" id="L125">                    startActivity(new Intent(getActivity(), NowPlayingMultiPaneActivity.class));</span>
+                } else {
+<span class="nc" id="L127">                    Intent intent = new Intent(Intent.ACTION_VIEW);</span>
+<span class="nc" id="L128">                    intent.setData(ScheduleContract.Sessions</span>
+<span class="nc" id="L129">                            .buildSessionsAtDirUri(System.currentTimeMillis()));</span>
+<span class="nc" id="L130">                    intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_now_playing));</span>
+<span class="nc" id="L131">                    startActivity(intent);</span>
+                }
+<span class="nc" id="L133">            }</span>
+        });
+<span class="fc" id="L135">        mRootView.addView(view);</span>
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Event that updates countdown timer. Posts itself again to {@link #mMessageHandler} to
+     * continue updating time.
+     */
+<span class="fc" id="L142">    private Runnable mCountdownRunnable = new Runnable() {</span>
+        public void run() {
+<span class="nc" id="L144">            int remainingSec = (int) Math.max(0,</span>
+<span class="nc" id="L145">                    (UIUtils.CONFERENCE_START_MILLIS - System.currentTimeMillis()) / 1000);</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">            final boolean conferenceStarted = remainingSec == 0;</span>
+
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            if (conferenceStarted) {</span>
+                // Conference started while in countdown mode, switch modes and
+                // bail on future countdown updates.
+<span class="nc" id="L151">                mMessageHandler.postDelayed(new Runnable() {</span>
+                    public void run() {
+<span class="nc" id="L153">                        refresh();</span>
+<span class="nc" id="L154">                    }</span>
+                }, 100);
+<span class="nc" id="L156">                return;</span>
+            }
+
+<span class="nc" id="L159">            final int secs = remainingSec % 86400;</span>
+<span class="nc" id="L160">            final int days = remainingSec / 86400;</span>
+<span class="nc" id="L161">            final String str = getResources().getQuantityString(</span>
+<span class="nc" id="L162">                    R.plurals.whats_on_countdown_title, days, days,</span>
+<span class="nc" id="L163">                    DateUtils.formatElapsedTime(secs));</span>
+<span class="nc" id="L164">            mCountdownTextView.setText(str);</span>
+
+            // Repost ourselves to keep updating countdown
+<span class="nc" id="L167">            mMessageHandler.postDelayed(mCountdownRunnable, 1000);</span>
+<span class="nc" id="L168">        }</span>
+    };
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

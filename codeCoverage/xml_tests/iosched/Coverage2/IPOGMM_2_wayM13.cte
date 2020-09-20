@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CteObject id="c1"> 
+  <Tree root="c3" id="c2" name="p13_tree"> 
+    <Composition id="c3" name="p13" x="0" y="0"> 
+      <Composition id="c4" name="p13_sequence" x="0" y="0"> 
+        <Composition id="c5" name="DASHBOARD_click_Map_btn" x="0" y="0"/>  
+        <Composition id="c6" name="MAP_click_Home_btn" x="0" y="0"/> 
+      </Composition> 
+    </Composition> 
+  </Tree>  
+  <TestGroup id="c7" name="TG"/> 
+</CteObject>

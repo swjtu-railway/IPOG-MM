@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BlockView.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">BlockView.java</span></div><h1>BlockView.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract.Blocks;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.LayerDrawable;
+import android.text.format.DateUtils;
+import android.widget.Button;
+
+import java.util.TimeZone;
+
+/**
+ * Custom view that represents a {@link Blocks#BLOCK_ID} instance, including its
+ * title and time span that it occupies. Usually organized automatically by
+ * {@link BlocksLayout} to match up against a {@link TimeRulerView} instance.
+ */
+public class BlockView extends Button {
+    private static final int TIME_STRING_FLAGS = DateUtils.FORMAT_SHOW_DATE
+            | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY |
+            DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_ABBREV_TIME;
+
+    private final String mBlockId;
+    private final String mTitle;
+    private final long mStartTime;
+    private final long mEndTime;
+    private final boolean mContainsStarred;
+    private final int mColumn;
+
+    public BlockView(Context context, String blockId, String title, long startTime,
+            long endTime, boolean containsStarred, int column) {
+<span class="fc" id="L51">        super(context);</span>
+
+<span class="fc" id="L53">        mBlockId = blockId;</span>
+<span class="fc" id="L54">        mTitle = title;</span>
+<span class="fc" id="L55">        mStartTime = startTime;</span>
+<span class="fc" id="L56">        mEndTime = endTime;</span>
+<span class="fc" id="L57">        mContainsStarred = containsStarred;</span>
+<span class="fc" id="L58">        mColumn = column;</span>
+
+<span class="fc" id="L60">        setText(mTitle);</span>
+
+        // TODO: turn into color state list with layers?
+<span class="fc" id="L63">        int textColor = Color.WHITE;</span>
+<span class="fc" id="L64">        int accentColor = -1;</span>
+<span class="pc bpc" id="L65" title="1 of 4 branches missed.">        switch (mColumn) {</span>
+            case 0:
+<span class="fc" id="L67">                accentColor = getResources().getColor(R.color.block_column_1);</span>
+<span class="fc" id="L68">                break;</span>
+            case 1:
+<span class="fc" id="L70">                accentColor = getResources().getColor(R.color.block_column_2);</span>
+<span class="fc" id="L71">                break;</span>
+            case 2:
+<span class="fc" id="L73">                accentColor = getResources().getColor(R.color.block_column_3);</span>
+                break;
+        }
+
+<span class="fc" id="L77">        LayerDrawable buttonDrawable = (LayerDrawable)</span>
+<span class="fc" id="L78">                context.getResources().getDrawable(R.drawable.btn_block);</span>
+<span class="fc" id="L79">        buttonDrawable.getDrawable(0).setColorFilter(accentColor, PorterDuff.Mode.SRC_ATOP);</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        buttonDrawable.getDrawable(1).setAlpha(mContainsStarred ? 255 : 0);</span>
+
+<span class="fc" id="L82">        setTextColor(textColor);</span>
+<span class="fc" id="L83">        setBackgroundDrawable(buttonDrawable);</span>
+<span class="fc" id="L84">    }</span>
+
+    public String getBlockId() {
+<span class="fc" id="L87">        return mBlockId;</span>
+    }
+
+    public String getBlockTimeString() {
+<span class="fc" id="L91">        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);</span>
+<span class="fc" id="L92">        return DateUtils.formatDateTime(getContext(), mStartTime, TIME_STRING_FLAGS);</span>
+    }
+
+    public long getStartTime() {
+<span class="fc" id="L96">        return mStartTime;</span>
+    }
+
+    public long getEndTime() {
+<span class="fc" id="L100">        return mEndTime;</span>
+    }
+
+    public int getColumn() {
+<span class="fc" id="L104">        return mColumn;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BezelImageView.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">BezelImageView.java</span></div><h1>BezelImageView.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import com.google.android.apps.iosched.R;
+
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
+import android.widget.ImageView;
+
+/**
+ * An {@link ImageView} that draws its contents inside a mask and draws a border drawable on top.
+ * This is useful for applying a beveled look to image contents, but is also flexible enough for use
+ * with other desired aesthetics.
+ */
+public class BezelImageView extends ImageView {
+
+    private static final String TAG = &quot;BezelImageView&quot;;
+
+    private Paint mMaskedPaint;
+    private Paint mCopyPaint;
+
+    private Rect mBounds;
+    private RectF mBoundsF;
+
+    private Drawable mBorderDrawable;
+    private Drawable mMaskDrawable;
+
+    public BezelImageView(Context context) {
+<span class="nc" id="L52">        this(context, null);</span>
+<span class="nc" id="L53">    }</span>
+
+    public BezelImageView(Context context, AttributeSet attrs) {
+<span class="fc" id="L56">        this(context, attrs, 0);</span>
+<span class="fc" id="L57">    }</span>
+
+    public BezelImageView(Context context, AttributeSet attrs, int defStyle) {
+<span class="fc" id="L60">        super(context, attrs, defStyle);</span>
+
+        // Attribute initialization
+<span class="fc" id="L63">        final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.BezelImageView,</span>
+                defStyle, 0);
+
+<span class="fc" id="L66">        mMaskDrawable = a.getDrawable(R.styleable.BezelImageView_maskDrawable);</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (mMaskDrawable == null) {</span>
+<span class="fc" id="L68">            mMaskDrawable = getResources().getDrawable(R.drawable.bezel_mask);</span>
+        }
+<span class="fc" id="L70">        mMaskDrawable.setCallback(this);</span>
+
+<span class="fc" id="L72">        mBorderDrawable = a.getDrawable(R.styleable.BezelImageView_borderDrawable);</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if (mBorderDrawable == null) {</span>
+<span class="fc" id="L74">            mBorderDrawable = getResources().getDrawable(R.drawable.bezel_border);</span>
+        }
+<span class="fc" id="L76">        mBorderDrawable.setCallback(this);</span>
+
+<span class="fc" id="L78">        a.recycle();</span>
+
+        // Other initialization
+<span class="fc" id="L81">        mMaskedPaint = new Paint();</span>
+<span class="fc" id="L82">        mMaskedPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));</span>
+
+<span class="fc" id="L84">        mCopyPaint = new Paint();</span>
+<span class="fc" id="L85">    }</span>
+
+    @Override
+    protected boolean setFrame(int l, int t, int r, int b) {
+<span class="fc" id="L89">        final boolean changed = super.setFrame(l, t, r, b);</span>
+<span class="fc" id="L90">        mBounds = new Rect(0, 0, r - l, b - t);</span>
+<span class="fc" id="L91">        mBoundsF = new RectF(mBounds);</span>
+<span class="fc" id="L92">        mBorderDrawable.setBounds(mBounds);</span>
+<span class="fc" id="L93">        mMaskDrawable.setBounds(mBounds);</span>
+<span class="fc" id="L94">        return changed;</span>
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+<span class="fc" id="L99">        int sc = canvas.saveLayer(mBoundsF, mCopyPaint,</span>
+                Canvas.ALL_SAVE_FLAG);
+//                Canvas.HAS_ALPHA_LAYER_SAVE_FLAG | Canvas.FULL_COLOR_LAYER_SAVE_FLAG);
+<span class="fc" id="L102">        mMaskDrawable.draw(canvas);</span>
+<span class="fc" id="L103">        canvas.saveLayer(mBoundsF, mMaskedPaint, 0);</span>
+<span class="fc" id="L104">        super.onDraw(canvas);</span>
+<span class="fc" id="L105">        canvas.restoreToCount(sc);</span>
+<span class="fc" id="L106">        mBorderDrawable.draw(canvas);</span>
+<span class="fc" id="L107">    }</span>
+
+    @Override
+    protected void drawableStateChanged() {
+<span class="fc" id="L111">        super.drawableStateChanged();</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (mBorderDrawable.isStateful()) {</span>
+<span class="nc" id="L113">            mBorderDrawable.setState(getDrawableState());</span>
+        }
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (mMaskDrawable.isStateful()) {</span>
+<span class="nc" id="L116">            mMaskDrawable.setState(getDrawableState());</span>
+        }
+
+        // TODO: is this the right place to invalidate?
+<span class="fc" id="L120">        invalidate();</span>
+<span class="fc" id="L121">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

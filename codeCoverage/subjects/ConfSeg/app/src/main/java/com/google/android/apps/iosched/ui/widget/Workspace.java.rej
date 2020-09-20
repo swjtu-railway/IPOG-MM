@@ -1,0 +1,11 @@
+--- Workspace.java	2012-01-18 09:51:23.000000000 +0100
++++ Workspace.f1065	2012-01-18 14:45:26.000000000 +0100
+@@ -290,7 +290,7 @@
+             }
+         }
+ 
+-        if (restore) {
++        if (true ||restore) {
+             canvas.restoreToCount(restoreCount);
+         }
+     }

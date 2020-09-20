@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ActivityHelperHoneycomb.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">ActivityHelperHoneycomb.java</span></div><h1>ActivityHelperHoneycomb.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import com.google.android.apps.iosched.R;
+
+import android.app.ActionBar;
+import android.app.Activity;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+
+/**
+ * An extension of {@link ActivityHelper} that provides Android 3.0-specific functionality for
+ * Honeycomb tablets. It thus requires API level 11.
+ */
+public class ActivityHelperHoneycomb extends ActivityHelper {
+    private Menu mOptionsMenu;
+
+    protected ActivityHelperHoneycomb(Activity activity) {
+<span class="fc" id="L35">        super(activity);</span>
+<span class="fc" id="L36">    }</span>
+
+    @Override
+    public void onPostCreate(Bundle savedInstanceState) {
+        // Do nothing in onPostCreate. ActivityHelper creates the old action bar, we don't
+        // need to for Honeycomb.
+<span class="fc" id="L42">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="fc" id="L46">        mOptionsMenu = menu;</span>
+<span class="fc" id="L47">        return super.onCreateOptionsMenu(menu);</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">        switch (item.getItemId()) {</span>
+            case android.R.id.home:
+                // Handle the HOME / UP affordance. Since the app is only two levels deep
+                // hierarchically, UP always just goes home.
+<span class="nc" id="L56">                goHome();</span>
+<span class="nc" id="L57">                return true;</span>
+        }
+<span class="fc" id="L59">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void setupHomeActivity() {
+<span class="fc" id="L65">        super.setupHomeActivity();</span>
+        // NOTE: there needs to be a content view set before this is called, so this method
+        // should be called in onPostCreate.
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if (UIUtils.isTablet(mActivity)) {</span>
+<span class="nc" id="L69">            mActivity.getActionBar().setDisplayOptions(</span>
+                    0,
+                    ActionBar.DISPLAY_SHOW_HOME | ActionBar.DISPLAY_SHOW_TITLE);
+        } else {
+<span class="fc" id="L73">            mActivity.getActionBar().setDisplayOptions(</span>
+                    ActionBar.DISPLAY_USE_LOGO,
+                    ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE);
+        }
+<span class="fc" id="L77">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public void setupSubActivity() {
+<span class="fc" id="L82">        super.setupSubActivity();</span>
+        // NOTE: there needs to be a content view set before this is called, so this method
+        // should be called in onPostCreate.
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (UIUtils.isTablet(mActivity)) {</span>
+<span class="nc" id="L86">            mActivity.getActionBar().setDisplayOptions(</span>
+                    ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_USE_LOGO,
+                    ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_USE_LOGO);
+        } else {
+<span class="fc" id="L90">            mActivity.getActionBar().setDisplayOptions(</span>
+                    0,
+                    ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_USE_LOGO);
+        }
+<span class="fc" id="L94">    }</span>
+
+    /**
+     * No-op on Honeycomb. The action bar title always remains the same.
+     */
+    @Override
+    public void setActionBarTitle(CharSequence title) {
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * No-op on Honeycomb. The action bar color always remains the same.
+     */
+    @Override
+    public void setActionBarColor(int color) {
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (!UIUtils.isTablet(mActivity)) {</span>
+<span class="fc" id="L109">            super.setActionBarColor(color);</span>
+        }
+<span class="fc" id="L111">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public void setRefreshActionButtonCompatState(boolean refreshing) {
+        // On Honeycomb, we can set the state of the refresh button by giving it a custom
+        // action view.
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        if (mOptionsMenu == null) {</span>
+<span class="fc" id="L119">            return;</span>
+        }
+
+<span class="nc" id="L122">        final MenuItem refreshItem = mOptionsMenu.findItem(R.id.menu_refresh);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (refreshItem != null) {</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (refreshing) {</span>
+<span class="nc" id="L125">                refreshItem.setActionView(R.layout.actionbar_indeterminate_progress);</span>
+            } else {
+<span class="nc" id="L127">                refreshItem.setActionView(null);</span>
+            }
+        }
+<span class="nc" id="L130">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

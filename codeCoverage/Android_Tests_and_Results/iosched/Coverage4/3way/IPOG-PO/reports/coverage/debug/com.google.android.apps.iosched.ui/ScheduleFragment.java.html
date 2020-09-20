@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScheduleFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">ScheduleFragment.java</span></div><h1>ScheduleFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.ui.widget.BlockView;
+import com.google.android.apps.iosched.ui.widget.BlocksLayout;
+import com.google.android.apps.iosched.ui.widget.ObservableScrollView;
+import com.google.android.apps.iosched.ui.widget.Workspace;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.Maps;
+import com.google.android.apps.iosched.util.MotionEventUtils;
+import com.google.android.apps.iosched.util.NotifyingAsyncQueryHandler;
+import com.google.android.apps.iosched.util.ParserUtils;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.graphics.Rect;
+import android.graphics.drawable.LayerDrawable;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.provider.BaseColumns;
+import androidx.fragment.app.Fragment;
+import android.text.format.DateUtils;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.TimeZone;
+
+/**
+ * Shows a horizontally-pageable calendar of conference days. Horizontaly paging is achieved using
+ * {@link Workspace}, and the primary UI classes for rendering the calendar are
+ * {@link com.google.android.apps.iosched.ui.widget.TimeRulerView},
+ * {@link BlocksLayout}, and {@link BlockView}.
+ */
+<span class="fc" id="L69">public class ScheduleFragment extends Fragment implements</span>
+        NotifyingAsyncQueryHandler.AsyncQueryListener,
+        ObservableScrollView.OnScrollListener,
+        View.OnClickListener {
+
+    private static final String TAG = &quot;ScheduleFragment&quot;;
+
+    /**
+     * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
+     */
+    private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_DATE
+            | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY;
+
+<span class="fc" id="L82">    private static final long TUE_START = ParserUtils.parseTime(&quot;2011-05-10T00:00:00.000-07:00&quot;);</span>
+<span class="fc" id="L83">    private static final long WED_START = ParserUtils.parseTime(&quot;2011-05-11T00:00:00.000-07:00&quot;);</span>
+
+    private static final int DISABLED_BLOCK_ALPHA = 100;
+
+<span class="fc" id="L87">    private static final HashMap&lt;String, Integer&gt; sTypeColumnMap = buildTypeColumnMap();</span>
+
+    // TODO: show blocks that don't fall into columns at the bottom
+
+    public static final String EXTRA_TIME_START = &quot;com.google.android.iosched.extra.TIME_START&quot;;
+    public static final String EXTRA_TIME_END = &quot;com.google.android.iosched.extra.TIME_END&quot;;
+
+    private NotifyingAsyncQueryHandler mHandler;
+
+    private Workspace mWorkspace;
+    private TextView mTitle;
+<span class="fc" id="L98">    private int mTitleCurrentDayIndex = -1;</span>
+    private View mLeftIndicator;
+    private View mRightIndicator;
+
+    /**
+     * A helper class containing object references related to a particular day in the schedule.
+     */
+<span class="fc" id="L105">    private class Day {</span>
+        private ViewGroup rootView;
+        private ObservableScrollView scrollView;
+        private View nowView;
+        private BlocksLayout blocksView;
+
+<span class="fc" id="L111">        private int index = -1;</span>
+<span class="fc" id="L112">        private String label = null;</span>
+<span class="fc" id="L113">        private Uri blocksUri = null;</span>
+<span class="fc" id="L114">        private long timeStart = -1;</span>
+<span class="fc" id="L115">        private long timeEnd = -1;</span>
+    }
+
+<span class="fc" id="L118">    private List&lt;Day&gt; mDays = new ArrayList&lt;Day&gt;();</span>
+
+    private static HashMap&lt;String, Integer&gt; buildTypeColumnMap() {
+<span class="fc" id="L121">        final HashMap&lt;String, Integer&gt; map = Maps.newHashMap();</span>
+<span class="fc" id="L122">        map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);</span>
+<span class="fc" id="L123">        map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);</span>
+<span class="fc" id="L124">        map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);</span>
+<span class="fc" id="L125">        return map;</span>
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L130">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L131">        mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);</span>
+<span class="fc" id="L132">        setHasOptionsMenu(true);</span>
+<span class="fc" id="L133">        AnalyticsUtils.getInstance(getActivity()).trackPageView(&quot;/Schedule&quot;);</span>
+<span class="fc" id="L134">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+<span class="fc" id="L139">        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_schedule, null);</span>
+
+<span class="fc" id="L141">        mWorkspace = (Workspace) root.findViewById(R.id.workspace);</span>
+
+<span class="fc" id="L143">        mTitle = (TextView) root.findViewById(R.id.block_title);</span>
+
+<span class="fc" id="L145">        mLeftIndicator = root.findViewById(R.id.indicator_left);</span>
+<span class="fc" id="L146">        mLeftIndicator.setOnTouchListener(new View.OnTouchListener() {</span>
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                if ((motionEvent.getAction() &amp; MotionEventUtils.ACTION_MASK)</span>
+                        == MotionEvent.ACTION_DOWN) {
+<span class="nc" id="L150">                    mWorkspace.scrollLeft();</span>
+<span class="nc" id="L151">                    return true;</span>
+                }
+<span class="nc" id="L153">                return false;</span>
+            }
+        });
+<span class="fc" id="L156">        mLeftIndicator.setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L158">                mWorkspace.scrollLeft();</span>
+<span class="nc" id="L159">            }</span>
+        });
+
+<span class="fc" id="L162">        mRightIndicator = root.findViewById(R.id.indicator_right);</span>
+<span class="fc" id="L163">        mRightIndicator.setOnTouchListener(new View.OnTouchListener() {</span>
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+<span class="fc bfc" id="L165" title="All 2 branches covered.">                if ((motionEvent.getAction() &amp; MotionEventUtils.ACTION_MASK)</span>
+                        == MotionEvent.ACTION_DOWN) {
+<span class="fc" id="L167">                    mWorkspace.scrollRight();</span>
+<span class="fc" id="L168">                    return true;</span>
+                }
+<span class="fc" id="L170">                return false;</span>
+            }
+        });
+<span class="fc" id="L173">        mRightIndicator.setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L175">                mWorkspace.scrollRight();</span>
+<span class="nc" id="L176">            }</span>
+        });
+
+<span class="fc" id="L179">        setupDay(inflater, TUE_START);</span>
+<span class="fc" id="L180">        setupDay(inflater, WED_START);</span>
+
+<span class="fc" id="L182">        updateWorkspaceHeader(0);</span>
+<span class="fc" id="L183">        mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {</span>
+            public void onScroll(float screenFraction) {
+<span class="fc" id="L185">                updateWorkspaceHeader(Math.round(screenFraction));</span>
+<span class="fc" id="L186">            }</span>
+        }, true);
+
+<span class="fc" id="L189">        return root;</span>
+    }
+
+    public void updateWorkspaceHeader(int dayIndex) {
+<span class="fc bfc" id="L193" title="All 2 branches covered.">        if (mTitleCurrentDayIndex == dayIndex) {</span>
+<span class="fc" id="L194">            return;</span>
+        }
+
+<span class="fc" id="L197">        mTitleCurrentDayIndex = dayIndex;</span>
+<span class="fc" id="L198">        Day day = mDays.get(dayIndex);</span>
+<span class="fc" id="L199">        mTitle.setText(day.label);</span>
+
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        mLeftIndicator</span>
+<span class="fc" id="L202">                .setVisibility((dayIndex != 0) ? View.VISIBLE : View.INVISIBLE);</span>
+<span class="fc" id="L203">        mRightIndicator</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">                .setVisibility((dayIndex &lt; mDays.size() - 1) ? View.VISIBLE : View.INVISIBLE);</span>
+<span class="fc" id="L205">    }</span>
+
+    private void setupDay(LayoutInflater inflater, long startMillis) {
+<span class="fc" id="L208">        Day day = new Day();</span>
+
+        // Setup data
+<span class="fc" id="L211">        day.index = mDays.size();</span>
+<span class="fc" id="L212">        day.timeStart = startMillis;</span>
+<span class="fc" id="L213">        day.timeEnd = startMillis + DateUtils.DAY_IN_MILLIS;</span>
+<span class="fc" id="L214">        day.blocksUri = ScheduleContract.Blocks.buildBlocksBetweenDirUri(</span>
+<span class="fc" id="L215">                day.timeStart, day.timeEnd);</span>
+
+        // Setup views
+<span class="fc" id="L218">        day.rootView = (ViewGroup) inflater.inflate(R.layout.blocks_content, null);</span>
+
+<span class="fc" id="L220">        day.scrollView = (ObservableScrollView) day.rootView.findViewById(R.id.blocks_scroll);</span>
+<span class="fc" id="L221">        day.scrollView.setOnScrollListener(this);</span>
+
+<span class="fc" id="L223">        day.blocksView = (BlocksLayout) day.rootView.findViewById(R.id.blocks);</span>
+<span class="fc" id="L224">        day.nowView = day.rootView.findViewById(R.id.blocks_now);</span>
+
+<span class="fc" id="L226">        day.blocksView.setDrawingCacheEnabled(true);</span>
+<span class="fc" id="L227">        day.blocksView.setAlwaysDrawnWithCacheEnabled(true);</span>
+
+<span class="fc" id="L229">        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);</span>
+<span class="fc" id="L230">        day.label = DateUtils.formatDateTime(getActivity(), startMillis, TIME_FLAGS);</span>
+
+<span class="fc" id="L232">        mWorkspace.addView(day.rootView);</span>
+<span class="fc" id="L233">        mDays.add(day);</span>
+<span class="fc" id="L234">    }</span>
+
+    @Override
+    public void onResume() {
+<span class="fc" id="L238">        super.onResume();</span>
+
+        // Since we build our views manually instead of using an adapter, we
+        // need to manually requery every time launched.
+<span class="fc" id="L242">        requery();</span>
+
+<span class="fc" id="L244">        getActivity().getContentResolver().registerContentObserver(</span>
+                ScheduleContract.Sessions.CONTENT_URI, true, mSessionChangesObserver);
+
+        // Start listening for time updates to adjust &quot;now&quot; bar. TIME_TICK is
+        // triggered once per minute, which is how we move the bar over time.
+<span class="fc" id="L249">        final IntentFilter filter = new IntentFilter();</span>
+<span class="fc" id="L250">        filter.addAction(Intent.ACTION_TIME_TICK);</span>
+<span class="fc" id="L251">        filter.addAction(Intent.ACTION_TIME_CHANGED);</span>
+<span class="fc" id="L252">        filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);</span>
+<span class="fc" id="L253">        getActivity().registerReceiver(mReceiver, filter, null, new Handler());</span>
+<span class="fc" id="L254">    }</span>
+
+    private void requery() {
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        for (Day day : mDays) {</span>
+<span class="fc" id="L258">            mHandler.startQuery(0, day, day.blocksUri, BlocksQuery.PROJECTION,</span>
+                    null, null, ScheduleContract.Blocks.DEFAULT_SORT);
+<span class="fc" id="L260">        }</span>
+<span class="fc" id="L261">    }</span>
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+<span class="fc" id="L265">        super.onActivityCreated(savedInstanceState);</span>
+<span class="fc" id="L266">        getActivity().runOnUiThread(new Runnable() {</span>
+            public void run() {
+<span class="fc" id="L268">                updateNowView(true);</span>
+<span class="fc" id="L269">            }</span>
+        });
+<span class="fc" id="L271">    }</span>
+
+    @Override
+    public void onPause() {
+<span class="fc" id="L275">        super.onPause();</span>
+<span class="fc" id="L276">        getActivity().unregisterReceiver(mReceiver);</span>
+<span class="fc" id="L277">        getActivity().getContentResolver().unregisterContentObserver(mSessionChangesObserver);</span>
+<span class="fc" id="L278">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    public void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">        if (getActivity() == null) {</span>
+<span class="nc" id="L285">            return;</span>
+        }
+
+<span class="fc" id="L288">        Day day = (Day) cookie;</span>
+
+        // Clear out any existing sessions before inserting again
+<span class="fc" id="L291">        day.blocksView.removeAllBlocks();</span>
+
+        try {
+<span class="fc bfc" id="L294" title="All 2 branches covered.">            while (cursor.moveToNext()) {</span>
+<span class="fc" id="L295">                final String type = cursor.getString(BlocksQuery.BLOCK_TYPE);</span>
+<span class="fc" id="L296">                final Integer column = sTypeColumnMap.get(type);</span>
+                // TODO: place random blocks at bottom of entire layout
+<span class="fc bfc" id="L298" title="All 2 branches covered.">                if (column == null) {</span>
+<span class="fc" id="L299">                    continue;</span>
+                }
+
+<span class="fc" id="L302">                final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);</span>
+<span class="fc" id="L303">                final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);</span>
+<span class="fc" id="L304">                final long start = cursor.getLong(BlocksQuery.BLOCK_START);</span>
+<span class="fc" id="L305">                final long end = cursor.getLong(BlocksQuery.BLOCK_END);</span>
+<span class="pc bpc" id="L306" title="1 of 2 branches missed.">                final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;</span>
+
+<span class="fc" id="L308">                final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,</span>
+<span class="fc" id="L309">                        containsStarred, column);</span>
+
+<span class="fc" id="L311">                final int sessionsCount = cursor.getInt(BlocksQuery.SESSIONS_COUNT);</span>
+<span class="fc bfc" id="L312" title="All 2 branches covered.">                if (sessionsCount &gt; 0) {</span>
+<span class="fc" id="L313">                    blockView.setOnClickListener(this);</span>
+                } else {
+<span class="fc" id="L315">                    blockView.setFocusable(false);</span>
+<span class="fc" id="L316">                    blockView.setEnabled(false);</span>
+<span class="fc" id="L317">                    LayerDrawable buttonDrawable = (LayerDrawable) blockView.getBackground();</span>
+<span class="fc" id="L318">                    buttonDrawable.getDrawable(0).setAlpha(DISABLED_BLOCK_ALPHA);</span>
+<span class="fc" id="L319">                    buttonDrawable.getDrawable(2).setAlpha(DISABLED_BLOCK_ALPHA);</span>
+                }
+
+<span class="fc" id="L322">                day.blocksView.addBlock(blockView);</span>
+<span class="fc" id="L323">            }</span>
+        } finally {
+<span class="pc" id="L325">            cursor.close();</span>
+<span class="pc" id="L326">        }</span>
+<span class="fc" id="L327">    }</span>
+
+    /** {@inheritDoc} */
+    public void onClick(View view) {
+<span class="pc bpc" id="L331" title="1 of 2 branches missed.">        if (view instanceof BlockView) {</span>
+<span class="fc" id="L332">            String title = ((BlockView)view).getText().toString();</span>
+<span class="fc" id="L333">            AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+                    &quot;Schedule&quot;, &quot;Session Click&quot;, title, 0);
+<span class="fc" id="L335">            final String blockId = ((BlockView) view).getBlockId();</span>
+<span class="fc" id="L336">            final Uri sessionsUri = ScheduleContract.Blocks.buildSessionsUri(blockId);</span>
+
+<span class="fc" id="L338">            final Intent intent = new Intent(Intent.ACTION_VIEW, sessionsUri);</span>
+<span class="fc" id="L339">            intent.putExtra(SessionsFragment.EXTRA_SCHEDULE_TIME_STRING,</span>
+<span class="fc" id="L340">                    ((BlockView) view).getBlockTimeString());</span>
+<span class="fc" id="L341">            ((BaseActivity) getActivity()).openActivityOrFragment(intent);</span>
+        }
+<span class="fc" id="L343">    }</span>
+
+    /**
+     * Update position and visibility of &quot;now&quot; view.
+     */
+    private boolean updateNowView(boolean forceScroll) {
+<span class="fc" id="L349">        final long now = UIUtils.getCurrentTime(getActivity());</span>
+
+<span class="fc" id="L351">        Day nowDay = null; // effectively Day corresponding to today</span>
+<span class="fc bfc" id="L352" title="All 2 branches covered.">        for (Day day : mDays) {</span>
+<span class="pc bpc" id="L353" title="1 of 4 branches missed.">            if (now &gt;= day.timeStart &amp;&amp; now &lt;= day.timeEnd) {</span>
+<span class="fc" id="L354">                nowDay = day;</span>
+<span class="fc" id="L355">                day.nowView.setVisibility(View.VISIBLE);</span>
+            } else {
+<span class="fc" id="L357">                day.nowView.setVisibility(View.GONE);</span>
+            }
+<span class="fc" id="L359">        }</span>
+
+<span class="pc bpc" id="L361" title="1 of 4 branches missed.">        if (nowDay != null &amp;&amp; forceScroll) {</span>
+
+
+//            final String type = &quot;type&quot;; //cursor.getString(BlocksQuery.BLOCK_TYPE);
+//            final Integer column = 0;//sTypeColumnMap.get(type);
+//            // TODO: place random blocks at bottom of entire layout
+////            if (column == null) {
+////                continue;
+////            }
+//
+//            final String blockId = &quot;id&quot;;//cursor.getString(BlocksQuery.BLOCK_ID);
+//            final String title = &quot;title&quot;;//cursor.getString(BlocksQuery.BLOCK_TITLE);
+//            final long start = nowDay.timeStart;//cursor.getLong(BlocksQuery.BLOCK_START);
+//            final long end = nowDay.timeEnd;//cursor.getLong(BlocksQuery.BLOCK_END);
+//            final boolean containsStarred = false;//cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
+//
+//            final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,
+//                    containsStarred, column);
+//
+//            final int sessionsCount = 1;//cursor.getInt(BlocksQuery.SESSIONS_COUNT);
+//            if (sessionsCount &gt; 0) {
+//                blockView.setOnClickListener(this);
+//            } else {
+//                blockView.setFocusable(true);
+//                blockView.setEnabled(true);
+//                LayerDrawable buttonDrawable = (LayerDrawable) blockView.getBackground();
+//                buttonDrawable.getDrawable(0).setAlpha(DISABLED_BLOCK_ALPHA);
+//                buttonDrawable.getDrawable(2).setAlpha(DISABLED_BLOCK_ALPHA);
+//            }
+//
+//            nowDay.blocksView.addBlock(blockView);
+
+
+            // Scroll to show &quot;now&quot; in center
+<span class="fc" id="L395">            mWorkspace.setCurrentScreen(nowDay.index);</span>
+<span class="fc" id="L396">            final int offset = nowDay.scrollView.getHeight() / 2;</span>
+<span class="fc" id="L397">            nowDay.nowView.requestRectangleOnScreen(new Rect(0, offset, 0, offset), true);</span>
+<span class="fc" id="L398">            nowDay.blocksView.requestLayout();</span>
+<span class="fc" id="L399">            return true;</span>
+        }
+
+<span class="fc" id="L402">        return false;</span>
+    }
+
+    public void onScrollChanged(ObservableScrollView view) {
+        // Keep each day view at the same vertical scroll offset.
+<span class="fc" id="L407">        final int scrollY = view.getScrollY();</span>
+<span class="fc bfc" id="L408" title="All 2 branches covered.">        for (Day day : mDays) {</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">            if (day.scrollView != view) {</span>
+<span class="fc" id="L410">                day.scrollView.scrollTo(0, scrollY);</span>
+            }
+<span class="fc" id="L412">        }</span>
+<span class="fc" id="L413">    }</span>
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+<span class="fc" id="L417">        inflater.inflate(R.menu.schedule_menu_items, menu);</span>
+<span class="fc" id="L418">        super.onCreateOptionsMenu(menu, inflater);</span>
+<span class="fc" id="L419">    }</span>
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L423" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_now) {</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">            if (!updateNowView(true)) {</span>
+<span class="nc" id="L425">                Toast.makeText(getActivity(), R.string.toast_now_not_visible,</span>
+<span class="nc" id="L426">                        Toast.LENGTH_SHORT).show();</span>
+            }
+<span class="nc" id="L428">            return true;</span>
+        }
+<span class="nc" id="L430">        return super.onOptionsItemSelected(item);</span>
+    }
+
+<span class="fc" id="L433">    private ContentObserver mSessionChangesObserver = new ContentObserver(new Handler()) {</span>
+        @Override
+        public void onChange(boolean selfChange) {
+<span class="nc" id="L436">            requery();</span>
+<span class="nc" id="L437">        }</span>
+    };
+
+<span class="fc" id="L440">    private BroadcastReceiver mReceiver = new BroadcastReceiver() {</span>
+        @Override
+        public void onReceive(Context context, Intent intent) {
+<span class="fc" id="L443">            Log.d(TAG, &quot;onReceive time update&quot;);</span>
+<span class="fc" id="L444">            updateNowView(false);</span>
+<span class="fc" id="L445">        }</span>
+    };
+
+    private interface BlocksQuery {
+<span class="fc" id="L449">        String[] PROJECTION = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Blocks.BLOCK_ID,
+                ScheduleContract.Blocks.BLOCK_TITLE,
+                ScheduleContract.Blocks.BLOCK_START,
+                ScheduleContract.Blocks.BLOCK_END,
+                ScheduleContract.Blocks.BLOCK_TYPE,
+                ScheduleContract.Blocks.SESSIONS_COUNT,
+                ScheduleContract.Blocks.CONTAINS_STARRED,
+        };
+
+        int _ID = 0;
+        int BLOCK_ID = 1;
+        int BLOCK_TITLE = 2;
+        int BLOCK_START = 3;
+        int BLOCK_END = 4;
+        int BLOCK_TYPE = 5;
+        int SESSIONS_COUNT = 6;
+        int CONTAINS_STARRED = 7;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

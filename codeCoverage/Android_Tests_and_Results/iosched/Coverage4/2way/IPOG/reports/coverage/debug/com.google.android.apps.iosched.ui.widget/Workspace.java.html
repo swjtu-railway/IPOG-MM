@@ -1,0 +1,1079 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Workspace.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">Workspace.java</span></div><h1>Workspace.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * ATTENTION: Consider using the 'ViewPager' widget, available in the
+ * Android Compatibility Package, r3:
+ *
+ *   http://developer.android.com/sdk/compatibility-library.html
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import com.google.android.apps.iosched.util.MotionEventUtils;
+import com.google.android.apps.iosched.util.ReflectionUtils;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.widget.Scroller;
+
+import java.util.ArrayList;
+
+/**
+ * A {@link android.view.ViewGroup} that shows one child at a time, allowing the user to swipe
+ * horizontally to page between other child views. Based on &lt;code&gt;Workspace.java&lt;/code&gt; in the
+ * &lt;code&gt;Launcher.git&lt;/code&gt; AOSP project.
+ *
+ * An improved version of this UI widget named 'ViewPager' is now available in the
+ * &lt;a href=&quot;http://developer.android.com/sdk/compatibility-library.html&quot;&gt;Android Compatibility
+ * Package, r3&lt;/a&gt;.
+ */
+public class Workspace extends ViewGroup {
+    private static final String TAG = &quot;Workspace&quot;;
+
+    private static final int INVALID_SCREEN = -1;
+
+    /**
+     * The velocity at which a fling gesture will cause us to snap to the next screen
+     */
+    private static final int SNAP_VELOCITY = 500;
+
+    /**
+     * The user needs to drag at least this much for it to be considered a fling gesture. This
+     * reduces the chance of a random twitch sending the user to the next screen.
+     */
+    // TODO: refactor
+    private static final int MIN_LENGTH_FOR_FLING = 100;
+
+    private int mDefaultScreen;
+
+<span class="fc" id="L75">    private boolean mFirstLayout = true;</span>
+<span class="fc" id="L76">    private boolean mHasLaidOut = false;</span>
+
+    private int mCurrentScreen;
+<span class="fc" id="L79">    private int mNextScreen = INVALID_SCREEN;</span>
+    private Scroller mScroller;
+    private VelocityTracker mVelocityTracker;
+
+    /**
+     * X position of the active pointer when it was first pressed down.
+     */
+    private float mDownMotionX;
+
+    /**
+     * Y position of the active pointer when it was first pressed down.
+     */
+    private float mDownMotionY;
+
+    /**
+     * This view's X scroll offset when the active pointer was first pressed down.
+     */
+    private int mDownScrollX;
+
+    private final static int TOUCH_STATE_REST = 0;
+    private final static int TOUCH_STATE_SCROLLING = 1;
+
+<span class="fc" id="L101">    private int mTouchState = TOUCH_STATE_REST;</span>
+
+    private OnLongClickListener mLongClickListener;
+
+<span class="fc" id="L105">    private boolean mAllowLongPress = true;</span>
+
+    private int mTouchSlop;
+    private int mPagingTouchSlop;
+    private int mMaximumVelocity;
+
+    private static final int INVALID_POINTER = -1;
+
+<span class="fc" id="L113">    private int mActivePointerId = INVALID_POINTER;</span>
+
+    private Drawable mSeparatorDrawable;
+
+    private OnScreenChangeListener mOnScreenChangeListener;
+    private OnScrollListener mOnScrollListener;
+
+    private boolean mLocked;
+
+<span class="fc" id="L122">    private int mDeferredScreenChange = -1;</span>
+<span class="fc" id="L123">    private boolean mDeferredScreenChangeFast = false;</span>
+<span class="fc" id="L124">    private boolean mDeferredNotify = false;</span>
+
+    private boolean mIgnoreChildFocusRequests;
+
+<span class="fc" id="L128">    private boolean mIsVerbose = false;</span>
+
+    public interface OnScreenChangeListener {
+        void onScreenChanged(View newScreen, int newScreenIndex);
+        void onScreenChanging(View newScreen, int newScreenIndex);
+    }
+
+    public interface OnScrollListener {
+        void onScroll(float screenFraction);
+    }
+
+    /**
+     * Used to inflate the com.google.android.ext.workspace.Workspace from XML.
+     *
+     * @param context The application's context.
+     * @param attrs   The attributes set containing the com.google.android.ext.workspace.Workspace's
+     *                customization values.
+     */
+    public Workspace(Context context, AttributeSet attrs) {
+<span class="fc" id="L147">        super(context, attrs);</span>
+
+<span class="fc" id="L149">        mDefaultScreen = 0;</span>
+<span class="fc" id="L150">        mLocked = false;</span>
+
+<span class="fc" id="L152">        setHapticFeedbackEnabled(false);</span>
+<span class="fc" id="L153">        initWorkspace();</span>
+
+<span class="fc" id="L155">        mIsVerbose = Log.isLoggable(TAG, Log.VERBOSE);</span>
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Initializes various states for this workspace.
+     */
+    private void initWorkspace() {
+<span class="fc" id="L162">        mScroller = new Scroller(getContext());</span>
+<span class="fc" id="L163">        mCurrentScreen = mDefaultScreen;</span>
+
+<span class="fc" id="L165">        final ViewConfiguration configuration = ViewConfiguration.get(getContext());</span>
+<span class="fc" id="L166">        mTouchSlop = configuration.getScaledTouchSlop();</span>
+<span class="fc" id="L167">        mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();</span>
+
+<span class="fc" id="L169">        mPagingTouchSlop = ReflectionUtils.callWithDefault(configuration,</span>
+<span class="fc" id="L170">                &quot;getScaledPagingTouchSlop&quot;, mTouchSlop * 2);</span>
+<span class="fc" id="L171">    }</span>
+
+    /**
+     * Returns the index of the currently displayed screen.
+     */
+    int getCurrentScreen() {
+<span class="nc" id="L177">        return mCurrentScreen;</span>
+    }
+
+    /**
+     * Returns the number of screens currently contained in this Workspace.
+     */
+    int getScreenCount() {
+<span class="fc" id="L184">        int childCount = getChildCount();</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">        if (mSeparatorDrawable != null) {</span>
+<span class="nc" id="L186">            return (childCount + 1) / 2;</span>
+        }
+<span class="fc" id="L188">        return childCount;</span>
+    }
+
+    View getScreenAt(int index) {
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">        if (mSeparatorDrawable == null) {</span>
+<span class="fc" id="L193">            return getChildAt(index);</span>
+        }
+<span class="nc" id="L195">        return getChildAt(index * 2);</span>
+    }
+
+    int getScrollWidth() {
+<span class="fc" id="L199">        int w = getWidth();</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        if (mSeparatorDrawable != null) {</span>
+<span class="nc" id="L201">            w += mSeparatorDrawable.getIntrinsicWidth();</span>
+        }
+<span class="fc" id="L203">        return w;</span>
+    }
+
+    void handleScreenChangeCompletion(int currentScreen) {
+<span class="fc" id="L207">        mCurrentScreen = currentScreen;</span>
+<span class="fc" id="L208">        View screen = getScreenAt(mCurrentScreen);</span>
+        //screen.requestFocus();
+        try {
+<span class="fc" id="L211">            ReflectionUtils.tryInvoke(screen, &quot;dispatchDisplayHint&quot;,</span>
+<span class="fc" id="L212">                    new Class[]{int.class}, View.VISIBLE);</span>
+<span class="fc" id="L213">            invalidate();</span>
+<span class="nc" id="L214">        } catch (NullPointerException e) {</span>
+<span class="nc" id="L215">            Log.e(TAG, &quot;Caught NullPointerException&quot;, e);</span>
+<span class="fc" id="L216">        }</span>
+<span class="fc" id="L217">        notifyScreenChangeListener(mCurrentScreen, true);</span>
+<span class="fc" id="L218">    }</span>
+
+    void notifyScreenChangeListener(int whichScreen, boolean changeComplete) {
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">        if (mOnScreenChangeListener != null) {</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">            if (changeComplete)</span>
+<span class="nc" id="L223">                mOnScreenChangeListener.onScreenChanged(getScreenAt(whichScreen), whichScreen);</span>
+            else
+<span class="nc" id="L225">                mOnScreenChangeListener.onScreenChanging(getScreenAt(whichScreen), whichScreen);</span>
+        }
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">        if (mOnScrollListener != null) {</span>
+<span class="fc" id="L228">            mOnScrollListener.onScroll(getCurrentScreenFraction());</span>
+        }
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Registers the specified listener on each screen contained in this workspace.
+     *
+     * @param listener The listener used to respond to long clicks.
+     */
+    @Override
+    public void setOnLongClickListener(OnLongClickListener listener) {
+<span class="nc" id="L239">        mLongClickListener = listener;</span>
+<span class="nc" id="L240">        final int count = getScreenCount();</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="nc" id="L242">            getScreenAt(i).setOnLongClickListener(listener);</span>
+        }
+<span class="nc" id="L244">    }</span>
+
+    @Override
+    public void computeScroll() {
+<span class="fc bfc" id="L248" title="All 2 branches covered.">        if (mScroller.computeScrollOffset()) {</span>
+<span class="fc" id="L249">            scrollTo(mScroller.getCurrX(), mScroller.getCurrY());</span>
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">            if (mOnScrollListener != null) {</span>
+<span class="fc" id="L251">                mOnScrollListener.onScroll(getCurrentScreenFraction());</span>
+            }
+<span class="fc" id="L253">            postInvalidate();</span>
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        } else if (mNextScreen != INVALID_SCREEN) {</span>
+            // The scroller has finished.
+<span class="fc" id="L256">            handleScreenChangeCompletion(Math.max(0, Math.min(mNextScreen, getScreenCount() - 1)));</span>
+<span class="fc" id="L257">            mNextScreen = INVALID_SCREEN;</span>
+        }
+<span class="fc" id="L259">    }</span>
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+<span class="fc" id="L263">        boolean restore = false;</span>
+<span class="fc" id="L264">        int restoreCount = 0;</span>
+
+        // ViewGroup.dispatchDraw() supports many features we don't need:
+        // clip to padding, layout animation, animation listener, disappearing
+        // children, etc. The following implementation attempts to fast-track
+        // the drawing dispatch by drawing only what we know needs to be drawn.
+
+<span class="pc bpc" id="L271" title="1 of 4 branches missed.">        boolean fastDraw = mTouchState != TOUCH_STATE_SCROLLING &amp;&amp; mNextScreen == INVALID_SCREEN;</span>
+        // If we are not scrolling or flinging, draw only the current screen
+<span class="fc bfc" id="L273" title="All 2 branches covered.">        if (fastDraw) {</span>
+<span class="pc bpc" id="L274" title="1 of 2 branches missed.">            if (getScreenAt(mCurrentScreen) != null) {</span>
+<span class="fc" id="L275">                drawChild(canvas, getScreenAt(mCurrentScreen), getDrawingTime());</span>
+            }
+        } else {
+<span class="fc" id="L278">            final long drawingTime = getDrawingTime();</span>
+            // If we are flinging, draw only the current screen and the target screen
+<span class="pc bpc" id="L280" title="2 of 4 branches missed.">            if (mNextScreen &gt;= 0 &amp;&amp; mNextScreen &lt; getScreenCount() &amp;&amp;</span>
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">                    Math.abs(mCurrentScreen - mNextScreen) == 1) {</span>
+<span class="fc" id="L282">                drawChild(canvas, getScreenAt(mCurrentScreen), drawingTime);</span>
+<span class="fc" id="L283">                drawChild(canvas, getScreenAt(mNextScreen), drawingTime);</span>
+            } else {
+                // If we are scrolling, draw all of our children
+<span class="nc" id="L286">                final int count = getChildCount();</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">                for (int i = 0; i &lt; count; i++) {</span>
+<span class="nc" id="L288">                    drawChild(canvas, getChildAt(i), drawingTime);</span>
+                }
+            }
+        }
+
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">        if (restore) {</span>
+<span class="nc" id="L294">            canvas.restoreToCount(restoreCount);</span>
+        }
+<span class="fc" id="L296">    }</span>
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+<span class="fc" id="L300">        super.onMeasure(widthMeasureSpec, heightMeasureSpec);</span>
+
+        // The children are given the same width and height as the workspace
+<span class="fc" id="L303">        final int count = getChildCount();</span>
+<span class="fc bfc" id="L304" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="pc bpc" id="L305" title="3 of 4 branches missed.">            if (mSeparatorDrawable != null &amp;&amp; (i &amp; 1) == 1) {</span>
+                // separator
+<span class="nc" id="L307">                getChildAt(i).measure(mSeparatorDrawable.getIntrinsicWidth(), heightMeasureSpec);</span>
+            } else {
+<span class="fc" id="L309">                getChildAt(i).measure(widthMeasureSpec, heightMeasureSpec);</span>
+            }
+        }
+
+<span class="fc bfc" id="L313" title="All 2 branches covered.">        if (mFirstLayout) {</span>
+<span class="fc" id="L314">            setHorizontalScrollBarEnabled(false);</span>
+<span class="fc" id="L315">            int width = MeasureSpec.getSize(widthMeasureSpec);</span>
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">            if (mSeparatorDrawable != null) {</span>
+<span class="nc" id="L317">                width += mSeparatorDrawable.getIntrinsicWidth();</span>
+            }
+<span class="fc" id="L319">            scrollTo(mCurrentScreen * width, 0);</span>
+<span class="fc" id="L320">            setHorizontalScrollBarEnabled(true);</span>
+<span class="fc" id="L321">            mFirstLayout = false;</span>
+        }
+<span class="fc" id="L323">    }</span>
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+<span class="fc" id="L327">        int childLeft = 0;</span>
+
+<span class="fc" id="L329">        final int count = getChildCount();</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L331">            final View child = getChildAt(i);</span>
+<span class="pc bpc" id="L332" title="1 of 2 branches missed.">            if (child.getVisibility() != View.GONE) {</span>
+<span class="fc" id="L333">                final int childWidth = child.getMeasuredWidth();</span>
+<span class="fc" id="L334">                child.layout(childLeft, 0, childLeft + childWidth, child.getMeasuredHeight());</span>
+<span class="fc" id="L335">                childLeft += childWidth;</span>
+            }
+        }
+
+<span class="fc" id="L339">        mHasLaidOut = true;</span>
+<span class="fc bfc" id="L340" title="All 2 branches covered.">        if (mDeferredScreenChange &gt;= 0) {</span>
+<span class="fc" id="L341">            snapToScreen(mDeferredScreenChange, mDeferredScreenChangeFast, mDeferredNotify);</span>
+<span class="fc" id="L342">            mDeferredScreenChange = -1;</span>
+<span class="fc" id="L343">            mDeferredScreenChangeFast = false;</span>
+        }
+<span class="fc" id="L345">    }</span>
+
+    @Override
+    public boolean requestChildRectangleOnScreen(View child, Rect rectangle, boolean immediate) {
+<span class="fc" id="L349">        int screen = indexOfChild(child);</span>
+<span class="pc bpc" id="L350" title="3 of 4 branches missed.">        if (mIgnoreChildFocusRequests &amp;&amp; !mScroller.isFinished()) {</span>
+<span class="nc" id="L351">            Log.w(TAG, &quot;Ignoring child focus request: request &quot; + mCurrentScreen + &quot; -&gt; &quot; + screen);</span>
+<span class="nc" id="L352">            return false;</span>
+        }
+<span class="pc bpc" id="L354" title="3 of 4 branches missed.">        if (screen != mCurrentScreen || !mScroller.isFinished()) {</span>
+<span class="fc" id="L355">            snapToScreen(screen);</span>
+<span class="fc" id="L356">            return true;</span>
+        }
+<span class="nc" id="L358">        return false;</span>
+    }
+
+    @Override
+    protected boolean onRequestFocusInDescendants(int direction, Rect previouslyFocusedRect) {
+        int focusableScreen;
+<span class="pc bpc" id="L364" title="1 of 2 branches missed.">        if (mNextScreen != INVALID_SCREEN) {</span>
+<span class="fc" id="L365">            focusableScreen = mNextScreen;</span>
+        } else {
+<span class="nc" id="L367">            focusableScreen = mCurrentScreen;</span>
+        }
+<span class="fc" id="L369">        View v = getScreenAt(focusableScreen);</span>
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">        if (v != null) {</span>
+<span class="fc" id="L371">            return v.requestFocus(direction, previouslyFocusedRect);</span>
+        }
+<span class="nc" id="L373">        return false;</span>
+    }
+
+    @Override
+    public boolean dispatchUnhandledMove(View focused, int direction) {
+<span class="nc bnc" id="L378" title="All 2 branches missed.">        if (direction == View.FOCUS_LEFT) {</span>
+<span class="nc bnc" id="L379" title="All 2 branches missed.">            if (getCurrentScreen() &gt; 0) {</span>
+<span class="nc" id="L380">                snapToScreen(getCurrentScreen() - 1);</span>
+<span class="nc" id="L381">                return true;</span>
+            }
+<span class="nc bnc" id="L383" title="All 2 branches missed.">        } else if (direction == View.FOCUS_RIGHT) {</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">            if (getCurrentScreen() &lt; getScreenCount() - 1) {</span>
+<span class="nc" id="L385">                snapToScreen(getCurrentScreen() + 1);</span>
+<span class="nc" id="L386">                return true;</span>
+            }
+        }
+<span class="nc" id="L389">        return super.dispatchUnhandledMove(focused, direction);</span>
+    }
+
+    @Override
+    public void addFocusables(ArrayList&lt;View&gt; views, int direction, int focusableMode) {
+<span class="nc" id="L394">        View focusableSourceScreen = null;</span>
+<span class="nc bnc" id="L395" title="All 4 branches missed.">        if (mCurrentScreen &gt;= 0 &amp;&amp; mCurrentScreen &lt; getScreenCount()) {</span>
+<span class="nc" id="L396">            focusableSourceScreen = getScreenAt(mCurrentScreen);</span>
+        }
+<span class="nc bnc" id="L398" title="All 2 branches missed.">        if (direction == View.FOCUS_LEFT) {</span>
+<span class="nc bnc" id="L399" title="All 2 branches missed.">            if (mCurrentScreen &gt; 0) {</span>
+<span class="nc" id="L400">                focusableSourceScreen = getScreenAt(mCurrentScreen - 1);</span>
+            }
+<span class="nc bnc" id="L402" title="All 2 branches missed.">        } else if (direction == View.FOCUS_RIGHT) {</span>
+<span class="nc bnc" id="L403" title="All 2 branches missed.">            if (mCurrentScreen &lt; getScreenCount() - 1) {</span>
+<span class="nc" id="L404">                focusableSourceScreen = getScreenAt(mCurrentScreen + 1);</span>
+            }
+        }
+
+<span class="nc bnc" id="L408" title="All 2 branches missed.">        if (focusableSourceScreen != null) {</span>
+<span class="nc" id="L409">            focusableSourceScreen.addFocusables(views, direction, focusableMode);</span>
+        }
+<span class="nc" id="L411">    }</span>
+
+    /**
+     * If one of our descendant views decides that it could be focused now, only pass that along if
+     * it's on the current screen.
+     *
+     * This happens when live folders requery, and if they're off screen, they end up calling
+     * requestFocus, which pulls it on screen.
+     */
+    @Override
+    public void focusableViewAvailable(View focused) {
+<span class="nc" id="L422">        View current = getScreenAt(mCurrentScreen);</span>
+<span class="nc" id="L423">        View v = focused;</span>
+        ViewParent parent;
+        while (true) {
+<span class="nc bnc" id="L426" title="All 2 branches missed.">            if (v == current) {</span>
+<span class="nc" id="L427">                super.focusableViewAvailable(focused);</span>
+<span class="nc" id="L428">                return;</span>
+            }
+<span class="nc bnc" id="L430" title="All 2 branches missed.">            if (v == this) {</span>
+<span class="nc" id="L431">                return;</span>
+            }
+<span class="nc" id="L433">            parent = v.getParent();</span>
+<span class="nc bnc" id="L434" title="All 2 branches missed.">            if (parent instanceof View) {</span>
+<span class="nc" id="L435">                v = (View) v.getParent();</span>
+            } else {
+<span class="nc" id="L437">                return;</span>
+            }
+        }
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        /*
+         * This method JUST determines whether we want to intercept the motion.
+         * If we return true, onTouchEvent will be called and we do the actual
+         * scrolling there.
+         */
+
+        // Begin tracking velocity even before we have intercepted touch events.
+<span class="fc bfc" id="L451" title="All 2 branches covered.">        if (mVelocityTracker == null) {</span>
+<span class="fc" id="L452">            mVelocityTracker = VelocityTracker.obtain();</span>
+        }
+<span class="fc" id="L454">        mVelocityTracker.addMovement(ev);</span>
+
+        /*
+         * Shortcut the most recurring case: the user is in the dragging
+         * state and he is moving his finger.  We want to intercept this
+         * motion.
+         */
+<span class="fc" id="L461">        final int action = ev.getAction();</span>
+<span class="pc bpc" id="L462" title="1 of 2 branches missed.">        if (mIsVerbose) {</span>
+<span class="nc" id="L463">            Log.v(TAG, &quot;onInterceptTouchEvent: &quot; + (ev.getAction() &amp; MotionEventUtils.ACTION_MASK));</span>
+        }
+<span class="pc bpc" id="L465" title="3 of 4 branches missed.">        if (((action &amp; MotionEventUtils.ACTION_MASK) == MotionEvent.ACTION_MOVE)</span>
+                &amp;&amp; (mTouchState == TOUCH_STATE_SCROLLING)) {
+<span class="nc bnc" id="L467" title="All 2 branches missed.">            if (mIsVerbose) {</span>
+<span class="nc" id="L468">                Log.v(TAG, &quot;Intercepting touch events&quot;);</span>
+            }
+<span class="nc" id="L470">            return true;</span>
+        }
+
+<span class="pc bpc" id="L473" title="3 of 5 branches missed.">        switch (action &amp; MotionEventUtils.ACTION_MASK) {</span>
+            case MotionEvent.ACTION_MOVE: {
+<span class="nc bnc" id="L475" title="All 2 branches missed.">                if (mLocked) {</span>
+                    // we're locked on the current screen, don't allow moving
+<span class="nc" id="L477">                    break;</span>
+                }
+
+                /*
+                 * Locally do absolute value. mDownMotionX is set to the y value
+                 * of the down event.
+                 */
+<span class="nc" id="L484">                final int pointerIndex = MotionEventUtils.findPointerIndex(ev, mActivePointerId);</span>
+<span class="nc" id="L485">                final float x = MotionEventUtils.getX(ev, pointerIndex);</span>
+<span class="nc" id="L486">                final float y = MotionEventUtils.getY(ev, pointerIndex);</span>
+<span class="nc" id="L487">                final int xDiff = (int) Math.abs(x - mDownMotionX);</span>
+<span class="nc" id="L488">                final int yDiff = (int) Math.abs(y - mDownMotionY);</span>
+
+<span class="nc bnc" id="L490" title="All 2 branches missed.">                boolean xPaged = xDiff &gt; mPagingTouchSlop;</span>
+<span class="nc bnc" id="L491" title="All 2 branches missed.">                boolean xMoved = xDiff &gt; mTouchSlop;</span>
+<span class="nc bnc" id="L492" title="All 2 branches missed.">                boolean yMoved = yDiff &gt; mTouchSlop;</span>
+
+<span class="nc bnc" id="L494" title="All 4 branches missed.">                if (xMoved || yMoved) {</span>
+<span class="nc bnc" id="L495" title="All 2 branches missed.">                    if (xPaged) {</span>
+                        // Scroll if the user moved far enough along the X axis
+<span class="nc" id="L497">                        mTouchState = TOUCH_STATE_SCROLLING;</span>
+                    }
+                    // Either way, cancel any pending longpress
+<span class="nc bnc" id="L500" title="All 2 branches missed.">                    if (mAllowLongPress) {</span>
+<span class="nc" id="L501">                        mAllowLongPress = false;</span>
+                        // Try canceling the long press. It could also have been scheduled
+                        // by a distant descendant, so use the mAllowLongPress flag to block
+                        // everything
+<span class="nc" id="L505">                        final View currentScreen = getScreenAt(mCurrentScreen);</span>
+<span class="nc bnc" id="L506" title="All 2 branches missed.">                        if (currentScreen != null) {</span>
+<span class="nc" id="L507">                            currentScreen.cancelLongPress();</span>
+                        }
+<span class="nc" id="L509">                    }</span>
+                }
+                break;
+            }
+
+            case MotionEvent.ACTION_DOWN: {
+<span class="fc" id="L515">                final float x = ev.getX();</span>
+<span class="fc" id="L516">                final float y = ev.getY();</span>
+                // Remember location of down touch
+<span class="fc" id="L518">                mDownMotionX = x;</span>
+<span class="fc" id="L519">                mDownMotionY = y;</span>
+<span class="fc" id="L520">                mDownScrollX = getScrollX();</span>
+<span class="fc" id="L521">                mActivePointerId = MotionEventUtils.getPointerId(ev, 0);</span>
+<span class="fc" id="L522">                mAllowLongPress = true;</span>
+
+                /*
+                 * If being flinged and user touches the screen, initiate drag;
+                 * otherwise don't.  mScroller.isFinished should be false when
+                 * being flinged.
+                 */
+<span class="pc bpc" id="L529" title="1 of 2 branches missed.">                mTouchState = mScroller.isFinished() ? TOUCH_STATE_REST : TOUCH_STATE_SCROLLING;</span>
+<span class="fc" id="L530">                break;</span>
+            }
+
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP:
+                // Release the drag
+<span class="fc" id="L536">                mTouchState = TOUCH_STATE_REST;</span>
+<span class="fc" id="L537">                mAllowLongPress = false;</span>
+<span class="fc" id="L538">                mActivePointerId = INVALID_POINTER;</span>
+<span class="pc bpc" id="L539" title="1 of 2 branches missed.">                if (mVelocityTracker != null) {</span>
+<span class="fc" id="L540">                    mVelocityTracker.recycle();</span>
+<span class="fc" id="L541">                    mVelocityTracker = null;</span>
+                }
+                break;
+
+            case MotionEventUtils.ACTION_POINTER_UP:
+<span class="nc" id="L546">                onSecondaryPointerUp(ev);</span>
+                break;
+        }
+
+        /*
+         * The only time we want to intercept motion events is if we are in the
+         * drag mode.
+         */
+<span class="pc bpc" id="L554" title="1 of 2 branches missed.">        boolean intercept = mTouchState != TOUCH_STATE_REST;</span>
+<span class="pc bpc" id="L555" title="1 of 2 branches missed.">        if (mIsVerbose) {</span>
+<span class="nc" id="L556">            Log.v(TAG, &quot;Intercepting touch events: &quot; + Boolean.toString(intercept));</span>
+        }
+<span class="fc" id="L558">        return intercept;</span>
+    }
+
+    void onSecondaryPointerUp(MotionEvent ev) {
+<span class="nc" id="L562">        final int pointerIndex = (ev.getAction() &amp; MotionEventUtils.ACTION_POINTER_INDEX_MASK) &gt;&gt;</span>
+                MotionEventUtils.ACTION_POINTER_INDEX_SHIFT;
+<span class="nc" id="L564">        final int pointerId = MotionEventUtils.getPointerId(ev, pointerIndex);</span>
+<span class="nc bnc" id="L565" title="All 2 branches missed.">        if (pointerId == mActivePointerId) {</span>
+            // This was our active pointer going up. Choose a new
+            // active pointer and adjust accordingly.
+            // TODO: Make this decision more intelligent.
+<span class="nc bnc" id="L569" title="All 2 branches missed.">            final int newPointerIndex = pointerIndex == 0 ? 1 : 0;</span>
+<span class="nc" id="L570">            mDownMotionX = MotionEventUtils.getX(ev, newPointerIndex);</span>
+<span class="nc" id="L571">            mDownMotionX = MotionEventUtils.getY(ev, newPointerIndex);</span>
+<span class="nc" id="L572">            mDownScrollX = getScrollX();</span>
+<span class="nc" id="L573">            mActivePointerId = MotionEventUtils.getPointerId(ev, newPointerIndex);</span>
+<span class="nc bnc" id="L574" title="All 2 branches missed.">            if (mVelocityTracker != null) {</span>
+<span class="nc" id="L575">                mVelocityTracker.clear();</span>
+            }
+        }
+<span class="nc" id="L578">    }</span>
+
+    @Override
+    public void requestChildFocus(View child, View focused) {
+<span class="nc" id="L582">        super.requestChildFocus(child, focused);</span>
+<span class="nc" id="L583">        int screen = indexOfChild(child);</span>
+<span class="nc bnc" id="L584" title="All 2 branches missed.">        if (mSeparatorDrawable != null) {</span>
+<span class="nc" id="L585">            screen /= 2;</span>
+        }
+<span class="nc bnc" id="L587" title="All 4 branches missed.">        if (screen &gt;= 0 &amp;&amp; !isInTouchMode()) {</span>
+<span class="nc" id="L588">            snapToScreen(screen);</span>
+        }
+<span class="nc" id="L590">    }</span>
+
+    @Override
+    public boolean onTouchEvent(MotionEvent ev) {
+<span class="nc bnc" id="L594" title="All 2 branches missed.">        if (mIsVerbose) {</span>
+<span class="nc" id="L595">            Log.v(TAG, &quot;onTouchEvent: &quot; + (ev.getAction() &amp; MotionEventUtils.ACTION_MASK));</span>
+        }
+
+<span class="nc bnc" id="L598" title="All 2 branches missed.">        if (mVelocityTracker == null) {</span>
+<span class="nc" id="L599">            mVelocityTracker = VelocityTracker.obtain();</span>
+        }
+<span class="nc" id="L601">        mVelocityTracker.addMovement(ev);</span>
+
+<span class="nc" id="L603">        final int action = ev.getAction();</span>
+
+<span class="nc bnc" id="L605" title="All 6 branches missed.">        switch (action &amp; MotionEventUtils.ACTION_MASK) {</span>
+            case MotionEvent.ACTION_DOWN:
+                // If being flinged and user touches, stop the fling. isFinished
+                // will be false if being flinged.
+<span class="nc bnc" id="L609" title="All 2 branches missed.">                if (!mScroller.isFinished()) {</span>
+<span class="nc" id="L610">                    mScroller.abortAnimation();</span>
+                }
+
+                // Remember where the motion event started
+<span class="nc" id="L614">                mDownMotionX = ev.getX();</span>
+<span class="nc" id="L615">                mDownMotionY = ev.getY();</span>
+<span class="nc" id="L616">                mDownScrollX = getScrollX();</span>
+<span class="nc" id="L617">                mActivePointerId = MotionEventUtils.getPointerId(ev, 0);</span>
+<span class="nc" id="L618">                break;</span>
+
+            case MotionEvent.ACTION_MOVE:
+<span class="nc bnc" id="L621" title="All 2 branches missed.">                if (mIsVerbose) {</span>
+<span class="nc" id="L622">                    Log.v(TAG, &quot;mTouchState=&quot; + mTouchState);</span>
+                }
+
+<span class="nc bnc" id="L625" title="All 2 branches missed.">                if (mTouchState == TOUCH_STATE_SCROLLING) {</span>
+                    // Scroll to follow the motion event
+<span class="nc" id="L627">                    final int pointerIndex = MotionEventUtils</span>
+<span class="nc" id="L628">                            .findPointerIndex(ev, mActivePointerId);</span>
+<span class="nc" id="L629">                    final float x = MotionEventUtils.getX(ev, pointerIndex);</span>
+
+<span class="nc" id="L631">                    final View lastChild = getChildAt(getChildCount() - 1);</span>
+<span class="nc" id="L632">                    final int maxScrollX = lastChild.getRight() - getWidth();</span>
+<span class="nc" id="L633">                    scrollTo(Math.max(0, Math.min(maxScrollX,</span>
+                            (int)(mDownScrollX + mDownMotionX - x
+                            ))), 0);
+<span class="nc bnc" id="L636" title="All 2 branches missed.">                    if (mOnScrollListener != null) {</span>
+<span class="nc" id="L637">                        mOnScrollListener.onScroll(getCurrentScreenFraction());</span>
+                    }
+
+<span class="nc bnc" id="L640" title="All 2 branches missed.">                } else if (mTouchState == TOUCH_STATE_REST) {</span>
+<span class="nc bnc" id="L641" title="All 2 branches missed.">                    if (mLocked) {</span>
+                        // we're locked on the current screen, don't allow moving
+<span class="nc" id="L643">                        break;</span>
+                    }
+
+                    /*
+                     * Locally do absolute value. mLastMotionX is set to the y value
+                     * of the down event.
+                     */
+<span class="nc" id="L650">                    final int pointerIndex = MotionEventUtils.findPointerIndex(ev, mActivePointerId);</span>
+<span class="nc" id="L651">                    final float x = MotionEventUtils.getX(ev, pointerIndex);</span>
+<span class="nc" id="L652">                    final float y = MotionEventUtils.getY(ev, pointerIndex);</span>
+<span class="nc" id="L653">                    final int xDiff = (int) Math.abs(x - mDownMotionX);</span>
+<span class="nc" id="L654">                    final int yDiff = (int) Math.abs(y - mDownMotionY);</span>
+
+<span class="nc bnc" id="L656" title="All 2 branches missed.">                    boolean xPaged = xDiff &gt; mPagingTouchSlop;</span>
+<span class="nc bnc" id="L657" title="All 2 branches missed.">                    boolean xMoved = xDiff &gt; mTouchSlop;</span>
+<span class="nc bnc" id="L658" title="All 2 branches missed.">                    boolean yMoved = yDiff &gt; mTouchSlop;</span>
+
+<span class="nc bnc" id="L660" title="All 4 branches missed.">                    if (xMoved || yMoved) {</span>
+<span class="nc bnc" id="L661" title="All 2 branches missed.">                        if (xPaged) {</span>
+                            // Scroll if the user moved far enough along the X axis
+<span class="nc" id="L663">                            mTouchState = TOUCH_STATE_SCROLLING;</span>
+                        }
+                        // Either way, cancel any pending longpress
+<span class="nc bnc" id="L666" title="All 2 branches missed.">                        if (mAllowLongPress) {</span>
+<span class="nc" id="L667">                            mAllowLongPress = false;</span>
+                            // Try canceling the long press. It could also have been scheduled
+                            // by a distant descendant, so use the mAllowLongPress flag to block
+                            // everything
+<span class="nc" id="L671">                            final View currentScreen = getScreenAt(mCurrentScreen);</span>
+<span class="nc bnc" id="L672" title="All 2 branches missed.">                            if (currentScreen != null) {</span>
+<span class="nc" id="L673">                                currentScreen.cancelLongPress();</span>
+                            }
+                        }
+                    }
+<span class="nc" id="L677">                }</span>
+                break;
+
+            case MotionEvent.ACTION_UP:
+<span class="nc bnc" id="L681" title="All 2 branches missed.">                if (mTouchState == TOUCH_STATE_SCROLLING) {</span>
+<span class="nc" id="L682">                    final int activePointerId = mActivePointerId;</span>
+<span class="nc" id="L683">                    final int pointerIndex = MotionEventUtils.findPointerIndex(ev, activePointerId);</span>
+<span class="nc" id="L684">                    final float x = MotionEventUtils.getX(ev, pointerIndex);</span>
+<span class="nc" id="L685">                    final VelocityTracker velocityTracker = mVelocityTracker;</span>
+<span class="nc" id="L686">                    velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);</span>
+                    //TODO(minsdk8): int velocityX = (int) MotionEventUtils.getXVelocity(velocityTracker, activePointerId);
+<span class="nc" id="L688">                    int velocityX = (int) velocityTracker.getXVelocity();</span>
+<span class="nc bnc" id="L689" title="All 2 branches missed.">                    boolean isFling = Math.abs(mDownMotionX - x) &gt; MIN_LENGTH_FOR_FLING;</span>
+
+<span class="nc" id="L691">                    final float scrolledPos = getCurrentScreenFraction();</span>
+<span class="nc" id="L692">                    final int whichScreen = Math.round(scrolledPos);</span>
+
+<span class="nc bnc" id="L694" title="All 4 branches missed.">                    if (isFling &amp;&amp; mIsVerbose) {</span>
+<span class="nc" id="L695">                        Log.v(TAG, &quot;isFling, whichScreen=&quot; + whichScreen</span>
+                                + &quot; scrolledPos=&quot; + scrolledPos
+                                + &quot; mCurrentScreen=&quot; + mCurrentScreen
+                                + &quot; velocityX=&quot; + velocityX);
+                    }
+<span class="nc bnc" id="L700" title="All 6 branches missed.">                    if (isFling &amp;&amp; velocityX &gt; SNAP_VELOCITY &amp;&amp; mCurrentScreen &gt; 0) {</span>
+                        // Fling hard enough to move left
+                        // Don't fling across more than one screen at a time.
+<span class="nc bnc" id="L703" title="All 2 branches missed.">                        final int bound = scrolledPos &lt;= whichScreen ?</span>
+                                mCurrentScreen - 1 : mCurrentScreen;
+<span class="nc" id="L705">                        snapToScreen(Math.min(whichScreen, bound));</span>
+<span class="nc bnc" id="L706" title="All 4 branches missed.">                    } else if (isFling &amp;&amp; velocityX &lt; -SNAP_VELOCITY &amp;&amp;</span>
+<span class="nc bnc" id="L707" title="All 2 branches missed.">                            mCurrentScreen &lt; getChildCount() - 1) {</span>
+                        // Fling hard enough to move right
+                        // Don't fling across more than one screen at a time.
+<span class="nc bnc" id="L710" title="All 2 branches missed.">                        final int bound = scrolledPos &gt;= whichScreen ?</span>
+                                mCurrentScreen + 1 : mCurrentScreen;
+<span class="nc" id="L712">                        snapToScreen(Math.max(whichScreen, bound));</span>
+<span class="nc" id="L713">                    } else {</span>
+<span class="nc" id="L714">                        snapToDestination();</span>
+                    }
+<span class="nc" id="L716">                } else {</span>
+<span class="nc" id="L717">                    performClick();</span>
+                }
+<span class="nc" id="L719">                mTouchState = TOUCH_STATE_REST;</span>
+<span class="nc" id="L720">                mActivePointerId = INVALID_POINTER;</span>
+                // Intentially fall through to cancel
+
+            case MotionEvent.ACTION_CANCEL:
+<span class="nc" id="L724">                mTouchState = TOUCH_STATE_REST;</span>
+<span class="nc" id="L725">                mActivePointerId = INVALID_POINTER;</span>
+<span class="nc bnc" id="L726" title="All 2 branches missed.">                if (mVelocityTracker != null) {</span>
+<span class="nc" id="L727">                    mVelocityTracker.recycle();</span>
+<span class="nc" id="L728">                    mVelocityTracker = null;</span>
+                }
+                break;
+
+            case MotionEventUtils.ACTION_POINTER_UP:
+<span class="nc" id="L733">                onSecondaryPointerUp(ev);</span>
+                break;
+        }
+
+<span class="nc" id="L737">        return true;</span>
+    }
+
+    /**
+     * Returns the current scroll position as a float value from 0 to the number of screens.
+     * Fractional values indicate that the user is mid-scroll or mid-fling, and whole values
+     * indicate that the Workspace is currently snapped to a screen.
+     */
+    float getCurrentScreenFraction() {
+<span class="fc bfc" id="L746" title="All 2 branches covered.">        if (!mHasLaidOut) {</span>
+<span class="fc" id="L747">            return mCurrentScreen;</span>
+        }
+<span class="fc" id="L749">        final int scrollX = getScrollX();</span>
+<span class="fc" id="L750">        final int screenWidth = getWidth();</span>
+<span class="fc" id="L751">        return (float) scrollX / screenWidth;</span>
+    }
+
+    void snapToDestination() {
+<span class="nc" id="L755">        final int screenWidth = getScrollWidth();</span>
+<span class="nc" id="L756">        final int whichScreen = (getScrollX() + (screenWidth / 2)) / screenWidth;</span>
+
+<span class="nc" id="L758">        snapToScreen(whichScreen);</span>
+<span class="nc" id="L759">    }</span>
+
+    void snapToScreen(int whichScreen) {
+<span class="fc" id="L762">        snapToScreen(whichScreen, false, true);</span>
+<span class="fc" id="L763">    }</span>
+
+    void snapToScreen(int whichScreen, boolean fast, boolean notify) {
+<span class="fc bfc" id="L766" title="All 2 branches covered.">        if (!mHasLaidOut) { // Can't handle scrolling until we are laid out.</span>
+<span class="fc" id="L767">            mDeferredScreenChange = whichScreen;</span>
+<span class="fc" id="L768">            mDeferredScreenChangeFast = fast;</span>
+<span class="fc" id="L769">            mDeferredNotify = notify;</span>
+<span class="fc" id="L770">            return;</span>
+        }
+
+<span class="pc bpc" id="L773" title="1 of 2 branches missed.">        if (mIsVerbose) {</span>
+<span class="nc" id="L774">            Log.v(TAG, &quot;Snapping to screen: &quot; + whichScreen);</span>
+        }
+
+<span class="fc" id="L777">        whichScreen = Math.max(0, Math.min(whichScreen, getScreenCount() - 1));</span>
+
+<span class="fc" id="L779">        final int screenDelta = Math.abs(whichScreen - mCurrentScreen);</span>
+
+<span class="pc bpc" id="L781" title="4 of 6 branches missed.">        final boolean screenChanging =</span>
+                (mNextScreen != INVALID_SCREEN &amp;&amp; mNextScreen != whichScreen) ||
+                        (mCurrentScreen != whichScreen);
+
+<span class="fc" id="L785">        mNextScreen = whichScreen;</span>
+
+<span class="fc" id="L787">        View focusedChild = getFocusedChild();</span>
+<span class="fc" id="L788">        boolean setTabFocus = false;</span>
+<span class="pc bpc" id="L789" title="5 of 6 branches missed.">        if (focusedChild != null &amp;&amp; screenDelta != 0 &amp;&amp; focusedChild == getScreenAt(</span>
+                mCurrentScreen)) {
+            // clearing the focus of the child will cause focus to jump to the tabs,
+            // which will in turn cause snapToScreen to be called again with a different
+            // value. To prevent this, we temporarily disable the OnTabClickListener
+            //if (mTabRow != null) {
+            //    mTabRow.setOnTabClickListener(null);
+            //}
+            //focusedChild.clearFocus();
+            //setTabRow(mTabRow); // restore the listener
+            //setTabFocus = true;
+        }
+
+<span class="fc" id="L802">        final int newX = whichScreen * getScrollWidth();</span>
+<span class="fc" id="L803">        final int sX = getScrollX();</span>
+<span class="fc" id="L804">        final int delta = newX - sX;</span>
+<span class="fc" id="L805">        int duration = screenDelta * 300;</span>
+<span class="fc" id="L806">        awakenScrollBars(duration);</span>
+<span class="pc bpc" id="L807" title="1 of 2 branches missed.">        if (duration == 0) {</span>
+<span class="nc" id="L808">            duration = Math.abs(delta);</span>
+        }
+<span class="pc bpc" id="L810" title="1 of 2 branches missed.">        if (fast) {</span>
+<span class="nc" id="L811">            duration = 0;</span>
+        }
+
+<span class="pc bpc" id="L814" title="1 of 2 branches missed.">        if (mNextScreen != mCurrentScreen) {</span>
+            // make the current listview hide its filter popup
+<span class="fc" id="L816">            final View screenAt = getScreenAt(mCurrentScreen);</span>
+<span class="pc bpc" id="L817" title="1 of 2 branches missed.">            if (screenAt != null) {</span>
+<span class="fc" id="L818">                ReflectionUtils.tryInvoke(screenAt, &quot;dispatchDisplayHint&quot;,</span>
+<span class="fc" id="L819">                        new Class[]{int.class}, View.INVISIBLE);</span>
+            } else {
+<span class="nc" id="L821">                Log.e(TAG, &quot;Screen at index was null. mCurrentScreen = &quot; + mCurrentScreen);</span>
+<span class="nc" id="L822">                return;</span>
+            }
+
+            // showing the filter popup for the next listview needs to be delayed
+            // until we've fully moved to that listview, since otherwise the
+            // popup will appear at the wrong place on the screen
+            //removeCallbacks(mFilterWindowEnabler);
+            //postDelayed(mFilterWindowEnabler, duration + 10);
+
+            // NOTE: moved to computeScroll and handleScreenChangeCompletion()
+        }
+
+<span class="pc bpc" id="L834" title="1 of 2 branches missed.">        if (!mScroller.isFinished()) {</span>
+<span class="nc" id="L835">            mScroller.abortAnimation();</span>
+        }
+<span class="fc" id="L837">        mScroller.startScroll(sX, 0, delta, 0, duration);</span>
+<span class="pc bpc" id="L838" title="2 of 4 branches missed.">        if (screenChanging &amp;&amp; notify) {</span>
+<span class="fc" id="L839">            notifyScreenChangeListener(mNextScreen, false);</span>
+        }
+<span class="fc" id="L841">        invalidate();</span>
+<span class="fc" id="L842">    }</span>
+
+    @Override
+    protected Parcelable onSaveInstanceState() {
+<span class="nc" id="L846">        final SavedState state = new SavedState(super.onSaveInstanceState());</span>
+<span class="nc" id="L847">        state.currentScreen = mCurrentScreen;</span>
+<span class="nc" id="L848">        return state;</span>
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+<span class="nc" id="L853">        SavedState savedState = (SavedState) state;</span>
+<span class="nc" id="L854">        super.onRestoreInstanceState(savedState.getSuperState());</span>
+<span class="nc bnc" id="L855" title="All 2 branches missed.">        if (savedState.currentScreen != -1) {</span>
+<span class="nc" id="L856">            snapToScreen(savedState.currentScreen, true, true);</span>
+        }
+<span class="nc" id="L858">    }</span>
+
+    /**
+     * @return True is long presses are still allowed for the current touch
+     */
+    boolean allowLongPress() {
+<span class="nc" id="L864">        return mAllowLongPress;</span>
+    }
+
+    /**
+     * Register a callback to be invoked when the screen is changed, either programmatically or via
+     * user interaction.  Will automatically trigger a callback.
+     *
+     * @param screenChangeListener The callback.
+     */
+    public void setOnScreenChangeListener(OnScreenChangeListener screenChangeListener) {
+<span class="nc" id="L874">        setOnScreenChangeListener(screenChangeListener, true);</span>
+<span class="nc" id="L875">    }</span>
+
+    /**
+     * Register a callback to be invoked when the screen is changed, either programmatically or via
+     * user interaction.
+     *
+     * @param screenChangeListener The callback.
+     * @param notifyImmediately Whether to trigger a notification immediately
+     */
+    public void setOnScreenChangeListener(OnScreenChangeListener screenChangeListener,
+            boolean notifyImmediately) {
+<span class="nc" id="L886">        mOnScreenChangeListener = screenChangeListener;</span>
+<span class="nc bnc" id="L887" title="All 4 branches missed.">        if (mOnScreenChangeListener != null &amp;&amp; notifyImmediately) {</span>
+<span class="nc" id="L888">            mOnScreenChangeListener.onScreenChanged(getScreenAt(mCurrentScreen), mCurrentScreen);</span>
+        }
+<span class="nc" id="L890">    }</span>
+
+    /**
+     * Register a callback to be invoked when this Workspace is mid-scroll or mid-fling, either
+     * due to user interaction or programmatic changes in the current screen index.
+     *
+     * @param scrollListener The callback.
+     * @param notifyImmediately Whether to trigger a notification immediately
+     */
+    public void setOnScrollListener(OnScrollListener scrollListener, boolean notifyImmediately) {
+<span class="fc" id="L900">        mOnScrollListener = scrollListener;</span>
+<span class="pc bpc" id="L901" title="2 of 4 branches missed.">        if (mOnScrollListener != null &amp;&amp; notifyImmediately) {</span>
+<span class="fc" id="L902">            mOnScrollListener.onScroll(getCurrentScreenFraction());</span>
+        }
+<span class="fc" id="L904">    }</span>
+
+    /**
+     * Scrolls to the given screen.
+     */
+    public void setCurrentScreen(int screenIndex) {
+<span class="fc" id="L910">        snapToScreen(Math.max(0, Math.min(getScreenCount() - 1, screenIndex)));</span>
+<span class="fc" id="L911">    }</span>
+
+    /**
+     * Scrolls to the given screen fast (no matter how large the scroll distance is)
+     *
+     * @param screenIndex
+     */
+    public void setCurrentScreenNow(int screenIndex) {
+<span class="nc" id="L919">        setCurrentScreenNow(screenIndex, true);</span>
+<span class="nc" id="L920">    }</span>
+
+    public void setCurrentScreenNow(int screenIndex, boolean notify) {
+<span class="nc" id="L923">        snapToScreen(Math.max(0, Math.min(getScreenCount() - 1, screenIndex)), true, notify);</span>
+<span class="nc" id="L924">    }</span>
+
+    /**
+     * Scrolls to the screen adjacent to the current screen on the left, if it exists. This method
+     * is a no-op if the Workspace is currently locked.
+     */
+    public void scrollLeft() {
+<span class="pc bpc" id="L931" title="1 of 2 branches missed.">        if (mLocked) {</span>
+<span class="nc" id="L932">            return;</span>
+        }
+<span class="pc bpc" id="L934" title="1 of 2 branches missed.">        if (mScroller.isFinished()) {</span>
+<span class="pc bpc" id="L935" title="1 of 2 branches missed.">            if (mCurrentScreen &gt; 0) {</span>
+<span class="fc" id="L936">                snapToScreen(mCurrentScreen - 1);</span>
+            }
+        } else {
+<span class="nc bnc" id="L939" title="All 2 branches missed.">            if (mNextScreen &gt; 0) {</span>
+<span class="nc" id="L940">                snapToScreen(mNextScreen - 1);</span>
+            }
+        }
+<span class="fc" id="L943">    }</span>
+
+    /**
+     * Scrolls to the screen adjacent to the current screen on the right, if it exists. This method
+     * is a no-op if the Workspace is currently locked.
+     */
+    public void scrollRight() {
+<span class="pc bpc" id="L950" title="1 of 2 branches missed.">        if (mLocked) {</span>
+<span class="nc" id="L951">            return;</span>
+        }
+<span class="pc bpc" id="L953" title="1 of 2 branches missed.">        if (mScroller.isFinished()) {</span>
+<span class="pc bpc" id="L954" title="1 of 2 branches missed.">            if (mCurrentScreen &lt; getChildCount() - 1) {</span>
+<span class="fc" id="L955">                snapToScreen(mCurrentScreen + 1);</span>
+            }
+        } else {
+<span class="nc bnc" id="L958" title="All 2 branches missed.">            if (mNextScreen &lt; getChildCount() - 1) {</span>
+<span class="nc" id="L959">                snapToScreen(mNextScreen + 1);</span>
+            }
+        }
+<span class="fc" id="L962">    }</span>
+
+    /**
+     * If set, invocations of requestChildRectangleOnScreen() will be ignored.
+     */
+    public void setIgnoreChildFocusRequests(boolean mIgnoreChildFocusRequests) {
+<span class="nc" id="L968">        this.mIgnoreChildFocusRequests = mIgnoreChildFocusRequests;</span>
+<span class="nc" id="L969">    }</span>
+
+    public void markViewSelected(View v) {
+<span class="nc" id="L972">        mCurrentScreen = indexOfChild(v);</span>
+<span class="nc" id="L973">    }</span>
+
+    /**
+     * Locks the current screen, preventing users from changing screens by swiping.
+     */
+    public void lockCurrentScreen() {
+<span class="nc" id="L979">        mLocked = true;</span>
+<span class="nc" id="L980">    }</span>
+
+    /**
+     * Unlocks the current screen, if it was previously locked. See also {@link
+     * Workspace#lockCurrentScreen()}.
+     */
+    public void unlockCurrentScreen() {
+<span class="nc" id="L987">        mLocked = false;</span>
+<span class="nc" id="L988">    }</span>
+
+    /**
+     * Sets the resource ID of the separator drawable to use between adjacent screens.
+     */
+    public void setSeparator(int resId) {
+<span class="nc bnc" id="L994" title="All 4 branches missed.">        if (mSeparatorDrawable != null &amp;&amp; resId == 0) {</span>
+            // remove existing separators
+<span class="nc" id="L996">            mSeparatorDrawable = null;</span>
+<span class="nc" id="L997">            int num = getChildCount();</span>
+<span class="nc bnc" id="L998" title="All 2 branches missed.">            for (int i = num - 2; i &gt; 0; i -= 2) {</span>
+<span class="nc" id="L999">                removeViewAt(i);</span>
+            }
+<span class="nc" id="L1001">            requestLayout();</span>
+<span class="nc bnc" id="L1002" title="All 2 branches missed.">        } else if (resId != 0) {</span>
+            // add or update separators
+<span class="nc bnc" id="L1004" title="All 2 branches missed.">            if (mSeparatorDrawable == null) {</span>
+                // add
+<span class="nc" id="L1006">                int numsep = getChildCount();</span>
+<span class="nc" id="L1007">                int insertIndex = 1;</span>
+<span class="nc" id="L1008">                mSeparatorDrawable = getResources().getDrawable(resId);</span>
+<span class="nc bnc" id="L1009" title="All 2 branches missed.">                for (int i = 1; i &lt; numsep; i++) {</span>
+<span class="nc" id="L1010">                    View v = new View(getContext());</span>
+<span class="nc" id="L1011">                    v.setBackgroundDrawable(mSeparatorDrawable);</span>
+<span class="nc" id="L1012">                    LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT,</span>
+                            LayoutParams.FILL_PARENT);
+<span class="nc" id="L1014">                    v.setLayoutParams(lp);</span>
+<span class="nc" id="L1015">                    addView(v, insertIndex);</span>
+<span class="nc" id="L1016">                    insertIndex += 2;</span>
+                }
+<span class="nc" id="L1018">                requestLayout();</span>
+<span class="nc" id="L1019">            } else {</span>
+                // update
+<span class="nc" id="L1021">                mSeparatorDrawable = getResources().getDrawable(resId);</span>
+<span class="nc" id="L1022">                int num = getChildCount();</span>
+<span class="nc bnc" id="L1023" title="All 2 branches missed.">                for (int i = num - 2; i &gt; 0; i -= 2) {</span>
+<span class="nc" id="L1024">                    getChildAt(i).setBackgroundDrawable(mSeparatorDrawable);</span>
+                }
+<span class="nc" id="L1026">                requestLayout();</span>
+            }
+        }
+<span class="nc" id="L1029">    }</span>
+
+    private static class SavedState extends BaseSavedState {
+<span class="nc" id="L1032">        int currentScreen = -1;</span>
+
+        SavedState(Parcelable superState) {
+<span class="nc" id="L1035">            super(superState);</span>
+<span class="nc" id="L1036">        }</span>
+
+        private SavedState(Parcel in) {
+<span class="nc" id="L1039">            super(in);</span>
+<span class="nc" id="L1040">            currentScreen = in.readInt();</span>
+<span class="nc" id="L1041">        }</span>
+
+        @Override
+        public void writeToParcel(Parcel out, int flags) {
+<span class="nc" id="L1045">            super.writeToParcel(out, flags);</span>
+<span class="nc" id="L1046">            out.writeInt(currentScreen);</span>
+<span class="nc" id="L1047">        }</span>
+
+<span class="nc" id="L1049">        public static final Parcelable.Creator&lt;SavedState&gt; CREATOR =</span>
+<span class="nc" id="L1050">                new Parcelable.Creator&lt;SavedState&gt;() {</span>
+                    public SavedState createFromParcel(Parcel in) {
+<span class="nc" id="L1052">                        return new SavedState(in);</span>
+                    }
+
+                    public SavedState[] newArray(int size) {
+<span class="nc" id="L1056">                        return new SavedState[size];</span>
+                    }
+                };
+    }
+
+    public void addViewToFront(View v) {
+<span class="nc" id="L1062">        mCurrentScreen++;</span>
+<span class="nc" id="L1063">        addView(v, 0);</span>
+<span class="nc" id="L1064">    }</span>
+
+    public void removeViewFromFront() {
+<span class="nc" id="L1067">        mCurrentScreen--;</span>
+<span class="nc" id="L1068">        removeViewAt(0);</span>
+<span class="nc" id="L1069">    }</span>
+
+    public void addViewToBack(View v) {
+<span class="nc" id="L1072">        addView(v);</span>
+<span class="nc" id="L1073">    }</span>
+
+    public void removeViewFromBack() {
+<span class="nc" id="L1076">        removeViewAt(getChildCount() - 1);</span>
+<span class="nc" id="L1077">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

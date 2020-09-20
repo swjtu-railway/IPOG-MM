@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CteObject id="c1"> 
+  <Tree root="c3" id="c2" name="p140_tree"> 
+    <Composition id="c3" name="p140" x="0" y="0"> 
+      <Composition id="c4" name="p140_sequence" x="0" y="0"> 
+        <Composition id="c5" name="DASHBOARD_click_Schedule_btn" x="0" y="0"/>  
+        <Composition id="c6" name="SCHEDULE_scroll_Up" x="0" y="0"/>  
+        <Composition id="c7" name="SCHEDULE_click_Previous_Arrows" x="0" y="0"/>  
+        <Composition id="c8" name="SCHEDULE_click_Next_Arrows" x="0" y="0"/>  
+        <Composition id="c9" name="SCHEDULE_click_Office_hours" x="0" y="0"> 
+          <Classification x="0" y="0" id="c10" name="Offfice_hours_param"> 
+            <Class id="c11" name="0" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c12"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.5"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c13" name="1" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c14"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.5"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class> 
+          </Classification> 
+        </Composition> 
+      </Composition> 
+    </Composition> 
+  </Tree>  
+  <TestGroup id="c15" name="TG"> 
+    <TestGroup id="c16" name="PW-McDowell"> 
+      <TestCase id="c17" name="tc0">
+        <Marks true="c11 "/>
+      </TestCase>
+      <TestCase id="c18" name="tc1">
+        <Marks true="c13 "/>
+      </TestCase>
+    </TestGroup> 
+  </TestGroup> 
+</CteObject>

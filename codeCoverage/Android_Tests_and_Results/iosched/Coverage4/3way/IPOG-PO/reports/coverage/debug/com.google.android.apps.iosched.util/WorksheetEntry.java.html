@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WorksheetEntry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">WorksheetEntry.java</span></div><h1>WorksheetEntry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import android.text.format.DateUtils;
+
+import java.io.IOException;
+
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.HREF;
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.LINK;
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.REL;
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.TITLE;
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.UPDATED;
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.END_TAG;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+import static org.xmlpull.v1.XmlPullParser.TEXT;
+
+<span class="nc" id="L36">public class WorksheetEntry {</span>
+    private static final String REL_LISTFEED = &quot;http://schemas.google.com/spreadsheets/2006#listfeed&quot;;
+
+    private long mUpdated;
+    private String mTitle;
+    private String mListFeed;
+
+    public long getUpdated() {
+<span class="nc" id="L44">        return mUpdated;</span>
+    }
+
+    public String getTitle() {
+<span class="nc" id="L48">        return mTitle;</span>
+    }
+
+    public String getListFeed() {
+<span class="nc" id="L52">        return mListFeed;</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L57">        return &quot;title=&quot; + mTitle + &quot;, updated=&quot; + mUpdated + &quot; (&quot;</span>
+<span class="nc" id="L58">                + DateUtils.getRelativeTimeSpanString(mUpdated) + &quot;)&quot;;</span>
+    }
+
+    public static WorksheetEntry fromParser(XmlPullParser parser) throws XmlPullParserException,
+            IOException {
+<span class="nc" id="L63">        final int depth = parser.getDepth();</span>
+<span class="nc" id="L64">        final WorksheetEntry entry = new WorksheetEntry();</span>
+
+<span class="nc" id="L66">        String tag = null;</span>
+        int type;
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        while (((type = parser.next()) != END_TAG ||</span>
+<span class="nc bnc" id="L69" title="All 4 branches missed.">                parser.getDepth() &gt; depth) &amp;&amp; type != END_DOCUMENT) {</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">            if (type == START_TAG) {</span>
+<span class="nc" id="L71">                tag = parser.getName();</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">                if (LINK.equals(tag)) {</span>
+<span class="nc" id="L73">                    final String rel = parser.getAttributeValue(null, REL);</span>
+<span class="nc" id="L74">                    final String href = parser.getAttributeValue(null, HREF);</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">                    if (REL_LISTFEED.equals(rel)) {</span>
+<span class="nc" id="L76">                        entry.mListFeed = href;</span>
+                    }
+<span class="nc" id="L78">                }</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            } else if (type == END_TAG) {</span>
+<span class="nc" id="L80">                tag = null;</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">            } else if (type == TEXT) {</span>
+<span class="nc" id="L82">                final String text = parser.getText();</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">                if (TITLE.equals(tag)) {</span>
+<span class="nc" id="L84">                    entry.mTitle = text;</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                } else if (UPDATED.equals(tag)) {</span>
+<span class="nc" id="L86">                    entry.mUpdated = ParserUtils.parseTime(text);</span>
+                }
+<span class="nc" id="L88">            }</span>
+        }
+<span class="nc" id="L90">        return entry;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

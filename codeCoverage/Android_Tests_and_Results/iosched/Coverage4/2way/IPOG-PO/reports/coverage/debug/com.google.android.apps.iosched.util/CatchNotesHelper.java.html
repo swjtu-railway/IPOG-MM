@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CatchNotesHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">CatchNotesHelper.java</span></div><h1>CatchNotesHelper.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import com.google.android.apps.iosched.R;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.Uri;
+
+/**
+ * Helper class for the Catch Notes integration, based on example code at
+ * {@link https://github.com/catch/docs-api/}.
+ */
+public class CatchNotesHelper {
+    private static final String TAG = &quot;CatchNotesHelper&quot;;
+
+    // Intent actions
+    public static final String ACTION_ADD = &quot;com.catchnotes.intent.action.ADD&quot;;
+    public static final String ACTION_VIEW = &quot;com.catchnotes.intent.action.VIEW&quot;;
+
+    // Intent extras for ACTION_ADD
+    public static final String EXTRA_SOURCE = &quot;com.catchnotes.intent.extra.SOURCE&quot;;
+    public static final String EXTRA_SOURCE_URL = &quot;com.catchnotes.intent.extra.SOURCE_URL&quot;;
+
+    // Intent extras for ACTION_VIEW
+    public static final String EXTRA_VIEW_FILTER = &quot;com.catchnotes.intent.extra.VIEW_FILTER&quot;;
+
+    // Note: &quot;3banana&quot; was the original name of Catch Notes. Though it has been
+    // rebranded, the package name must persist.
+    private static final String NOTES_PACKAGE_NAME = &quot;com.threebanana.notes&quot;;
+    private static final String NOTES_MARKET_URI = &quot;http://market.android.com/details?id=&quot;
+            + NOTES_PACKAGE_NAME;
+
+    private static final int NOTES_MIN_VERSION_CODE = 54;
+
+    private final Context mContext;
+
+<span class="fc" id="L56">    public CatchNotesHelper(Context context) {</span>
+<span class="fc" id="L57">        mContext = context;</span>
+<span class="fc" id="L58">    }</span>
+
+    public Intent createNoteIntent(String message) {
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">        if (!isNotesInstalledAndMinimumVersion()) {</span>
+<span class="fc" id="L62">            return notesMarketIntent();</span>
+        }
+
+<span class="nc" id="L65">        Intent intent = new Intent();</span>
+<span class="nc" id="L66">        intent.setAction(ACTION_ADD);</span>
+<span class="nc" id="L67">        intent.putExtra(Intent.EXTRA_TEXT, message);</span>
+<span class="nc" id="L68">        intent.putExtra(EXTRA_SOURCE, mContext.getString(R.string.app_name));</span>
+<span class="nc" id="L69">        intent.putExtra(EXTRA_SOURCE_URL, &quot;http://www.google.com/io/&quot;);</span>
+<span class="nc" id="L70">        intent.putExtra(Intent.EXTRA_TITLE, mContext.getString(R.string.app_name));</span>
+<span class="nc" id="L71">        return intent;</span>
+    }
+
+    public Intent viewNotesIntent(String tag) {
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (!isNotesInstalledAndMinimumVersion()) {</span>
+<span class="fc" id="L76">            return notesMarketIntent();</span>
+        }
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (!tag.startsWith(&quot;#&quot;)) {</span>
+<span class="nc" id="L80">            tag = &quot;#&quot; + tag;</span>
+        }
+
+<span class="nc" id="L83">        Intent intent = new Intent();</span>
+<span class="nc" id="L84">        intent.setAction(ACTION_VIEW);</span>
+<span class="nc" id="L85">        intent.putExtra(EXTRA_VIEW_FILTER, tag);</span>
+<span class="nc" id="L86">        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);</span>
+<span class="nc" id="L87">        return intent;</span>
+    }
+
+    /**
+     * Returns the installation status of Catch Notes.
+     */
+    public boolean isNotesInstalledAndMinimumVersion() {
+        try {
+<span class="fc" id="L95">            PackageInfo packageInfo = mContext.getPackageManager()</span>
+<span class="nc" id="L96">                    .getPackageInfo(NOTES_PACKAGE_NAME, PackageManager.GET_ACTIVITIES);</span>
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (packageInfo.versionCode &lt; NOTES_MIN_VERSION_CODE) {</span>
+<span class="nc" id="L99">                return false;</span>
+            }
+<span class="fc" id="L101">        } catch (NameNotFoundException e) {</span>
+<span class="fc" id="L102">            return false;</span>
+<span class="nc" id="L103">        }</span>
+
+<span class="nc" id="L105">        return true;</span>
+    }
+
+    public Intent notesMarketIntent() {
+<span class="fc" id="L109">        Uri uri = Uri.parse(NOTES_MARKET_URI);</span>
+<span class="fc" id="L110">        Intent intent = new Intent(Intent.ACTION_VIEW, uri);</span>
+<span class="fc" id="L111">        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);</span>
+<span class="fc" id="L112">        return intent;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

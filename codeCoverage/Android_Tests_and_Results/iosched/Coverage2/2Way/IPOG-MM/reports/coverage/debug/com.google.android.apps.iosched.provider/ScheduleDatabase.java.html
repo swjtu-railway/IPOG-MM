@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScheduleDatabase.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.provider</a> &gt; <span class="el_source">ScheduleDatabase.java</span></div><h1>ScheduleDatabase.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.provider;
+
+import com.google.android.apps.iosched.provider.ScheduleContract.Blocks;
+import com.google.android.apps.iosched.provider.ScheduleContract.BlocksColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Rooms;
+import com.google.android.apps.iosched.provider.ScheduleContract.RoomsColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Sessions;
+import com.google.android.apps.iosched.provider.ScheduleContract.SessionsColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Speakers;
+import com.google.android.apps.iosched.provider.ScheduleContract.SpeakersColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.SyncColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Tracks;
+import com.google.android.apps.iosched.provider.ScheduleContract.TracksColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Vendors;
+import com.google.android.apps.iosched.provider.ScheduleContract.VendorsColumns;
+
+import android.app.SearchManager;
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.provider.BaseColumns;
+import android.util.Log;
+
+/**
+ * Helper for managing {@link SQLiteDatabase} that stores data for
+ * {@link ScheduleProvider}.
+ */
+public class ScheduleDatabase extends SQLiteOpenHelper {
+    private static final String TAG = &quot;ScheduleDatabase&quot;;
+
+    private static final String DATABASE_NAME = &quot;schedule.db&quot;;
+
+    // NOTE: carefully update onUpgrade() when bumping database versions to make
+    // sure user data is saved.
+
+    private static final int VER_LAUNCH = 21;
+    private static final int VER_SESSION_FEEDBACK_URL = 22;
+    private static final int VER_SESSION_NOTES_URL_SLUG = 23;
+
+    private static final int DATABASE_VERSION = VER_SESSION_NOTES_URL_SLUG;
+
+    interface Tables {
+        String BLOCKS = &quot;blocks&quot;;
+        String TRACKS = &quot;tracks&quot;;
+        String ROOMS = &quot;rooms&quot;;
+        String SESSIONS = &quot;sessions&quot;;
+        String SPEAKERS = &quot;speakers&quot;;
+        String SESSIONS_SPEAKERS = &quot;sessions_speakers&quot;;
+        String SESSIONS_TRACKS = &quot;sessions_tracks&quot;;
+        String VENDORS = &quot;vendors&quot;;
+
+        String SESSIONS_SEARCH = &quot;sessions_search&quot;;
+        String VENDORS_SEARCH = &quot;vendors_search&quot;;
+
+        String SEARCH_SUGGEST = &quot;search_suggest&quot;;
+
+        String SESSIONS_JOIN_BLOCKS_ROOMS = &quot;sessions &quot;
+                + &quot;LEFT OUTER JOIN blocks ON sessions.block_id=blocks.block_id &quot;
+                + &quot;LEFT OUTER JOIN rooms ON sessions.room_id=rooms.room_id&quot;;
+
+        String VENDORS_JOIN_TRACKS = &quot;vendors &quot;
+                + &quot;LEFT OUTER JOIN tracks ON vendors.track_id=tracks.track_id&quot;;
+
+        String SESSIONS_SPEAKERS_JOIN_SPEAKERS = &quot;sessions_speakers &quot;
+                + &quot;LEFT OUTER JOIN speakers ON sessions_speakers.speaker_id=speakers.speaker_id&quot;;
+
+        String SESSIONS_SPEAKERS_JOIN_SESSIONS_BLOCKS_ROOMS = &quot;sessions_speakers &quot;
+                + &quot;LEFT OUTER JOIN sessions ON sessions_speakers.session_id=sessions.session_id &quot;
+                + &quot;LEFT OUTER JOIN blocks ON sessions.block_id=blocks.block_id &quot;
+                + &quot;LEFT OUTER JOIN rooms ON sessions.room_id=rooms.room_id&quot;;
+
+        String SESSIONS_TRACKS_JOIN_TRACKS = &quot;sessions_tracks &quot;
+                + &quot;LEFT OUTER JOIN tracks ON sessions_tracks.track_id=tracks.track_id&quot;;
+
+        String SESSIONS_TRACKS_JOIN_SESSIONS_BLOCKS_ROOMS = &quot;sessions_tracks &quot;
+                + &quot;LEFT OUTER JOIN sessions ON sessions_tracks.session_id=sessions.session_id &quot;
+                + &quot;LEFT OUTER JOIN blocks ON sessions.block_id=blocks.block_id &quot;
+                + &quot;LEFT OUTER JOIN rooms ON sessions.room_id=rooms.room_id&quot;;
+
+        String SESSIONS_SEARCH_JOIN_SESSIONS_BLOCKS_ROOMS = &quot;sessions_search &quot;
+                + &quot;LEFT OUTER JOIN sessions ON sessions_search.session_id=sessions.session_id &quot;
+                + &quot;LEFT OUTER JOIN blocks ON sessions.block_id=blocks.block_id &quot;
+                + &quot;LEFT OUTER JOIN rooms ON sessions.room_id=rooms.room_id&quot;;
+
+        String VENDORS_SEARCH_JOIN_VENDORS_TRACKS = &quot;vendors_search &quot;
+                + &quot;LEFT OUTER JOIN vendors ON vendors_search.vendor_id=vendors.vendor_id &quot;
+                + &quot;LEFT OUTER JOIN tracks ON vendors.track_id=tracks.track_id&quot;;
+
+    }
+
+    private interface Triggers {
+        String SESSIONS_SEARCH_INSERT = &quot;sessions_search_insert&quot;;
+        String SESSIONS_SEARCH_DELETE = &quot;sessions_search_delete&quot;;
+        String SESSIONS_SEARCH_UPDATE = &quot;sessions_search_update&quot;;
+
+        String VENDORS_SEARCH_INSERT = &quot;vendors_search_insert&quot;;
+        String VENDORS_SEARCH_DELETE = &quot;vendors_search_delete&quot;;
+    }
+
+    public interface SessionsSpeakers {
+        String SESSION_ID = &quot;session_id&quot;;
+        String SPEAKER_ID = &quot;speaker_id&quot;;
+    }
+
+    public interface SessionsTracks {
+        String SESSION_ID = &quot;session_id&quot;;
+        String TRACK_ID = &quot;track_id&quot;;
+    }
+
+    interface SessionsSearchColumns {
+        String SESSION_ID = &quot;session_id&quot;;
+        String BODY = &quot;body&quot;;
+    }
+
+    interface VendorsSearchColumns {
+        String VENDOR_ID = &quot;vendor_id&quot;;
+        String BODY = &quot;body&quot;;
+    }
+
+    /** Fully-qualified field names. */
+    private interface Qualified {
+        String SESSIONS_SEARCH_SESSION_ID = Tables.SESSIONS_SEARCH + &quot;.&quot;
+                + SessionsSearchColumns.SESSION_ID;
+        String VENDORS_SEARCH_VENDOR_ID = Tables.VENDORS_SEARCH + &quot;.&quot;
+                + VendorsSearchColumns.VENDOR_ID;
+
+        String SESSIONS_SEARCH = Tables.SESSIONS_SEARCH + &quot;(&quot; + SessionsSearchColumns.SESSION_ID
+                + &quot;,&quot; + SessionsSearchColumns.BODY + &quot;)&quot;;
+        String VENDORS_SEARCH = Tables.VENDORS_SEARCH + &quot;(&quot; + VendorsSearchColumns.VENDOR_ID + &quot;,&quot;
+                + VendorsSearchColumns.BODY + &quot;)&quot;;
+    }
+
+    /** {@code REFERENCES} clauses. */
+    private interface References {
+        String BLOCK_ID = &quot;REFERENCES &quot; + Tables.BLOCKS + &quot;(&quot; + Blocks.BLOCK_ID + &quot;)&quot;;
+        String TRACK_ID = &quot;REFERENCES &quot; + Tables.TRACKS + &quot;(&quot; + Tracks.TRACK_ID + &quot;)&quot;;
+        String ROOM_ID = &quot;REFERENCES &quot; + Tables.ROOMS + &quot;(&quot; + Rooms.ROOM_ID + &quot;)&quot;;
+        String SESSION_ID = &quot;REFERENCES &quot; + Tables.SESSIONS + &quot;(&quot; + Sessions.SESSION_ID + &quot;)&quot;;
+        String SPEAKER_ID = &quot;REFERENCES &quot; + Tables.SPEAKERS + &quot;(&quot; + Speakers.SPEAKER_ID + &quot;)&quot;;
+        String VENDOR_ID = &quot;REFERENCES &quot; + Tables.VENDORS + &quot;(&quot; + Vendors.VENDOR_ID + &quot;)&quot;;
+    }
+
+    private interface Subquery {
+        /**
+         * Subquery used to build the {@link SessionsSearchColumns#BODY} string
+         * used for indexing {@link Sessions} content.
+         */
+        String SESSIONS_BODY = &quot;(new.&quot; + Sessions.SESSION_TITLE
+                + &quot;||'; '||new.&quot; + Sessions.SESSION_ABSTRACT
+                + &quot;||'; '||&quot; + &quot;coalesce(new.&quot; + Sessions.SESSION_KEYWORDS + &quot;, '')&quot;
+                + &quot;)&quot;;
+
+        /**
+         * Subquery used to build the {@link VendorsSearchColumns#BODY} string
+         * used for indexing {@link Vendors} content.
+         */
+        String VENDORS_BODY = &quot;(new.&quot; + Vendors.VENDOR_NAME
+                + &quot;||'; '||new.&quot; + Vendors.VENDOR_DESC
+                + &quot;||'; '||new.&quot; + Vendors.VENDOR_PRODUCT_DESC + &quot;)&quot;;
+    }
+
+    public ScheduleDatabase(Context context) {
+<span class="fc" id="L179">        super(context, DATABASE_NAME, null, DATABASE_VERSION);</span>
+<span class="fc" id="L180">    }</span>
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+<span class="fc" id="L184">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.BLOCKS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + BlocksColumns.BLOCK_ID + &quot; TEXT NOT NULL,&quot;
+                + BlocksColumns.BLOCK_TITLE + &quot; TEXT NOT NULL,&quot;
+                + BlocksColumns.BLOCK_START + &quot; INTEGER NOT NULL,&quot;
+                + BlocksColumns.BLOCK_END + &quot; INTEGER NOT NULL,&quot;
+                + BlocksColumns.BLOCK_TYPE + &quot; TEXT,&quot;
+                + &quot;UNIQUE (&quot; + BlocksColumns.BLOCK_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L193">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.TRACKS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + TracksColumns.TRACK_ID + &quot; TEXT NOT NULL,&quot;
+                + TracksColumns.TRACK_NAME + &quot; TEXT,&quot;
+                + TracksColumns.TRACK_COLOR + &quot; INTEGER,&quot;
+                + TracksColumns.TRACK_ABSTRACT + &quot; TEXT,&quot;
+                + &quot;UNIQUE (&quot; + TracksColumns.TRACK_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L201">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.ROOMS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + RoomsColumns.ROOM_ID + &quot; TEXT NOT NULL,&quot;
+                + RoomsColumns.ROOM_NAME + &quot; TEXT,&quot;
+                + RoomsColumns.ROOM_FLOOR + &quot; TEXT,&quot;
+                + &quot;UNIQUE (&quot; + RoomsColumns.ROOM_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L208">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.SESSIONS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SyncColumns.UPDATED + &quot; INTEGER NOT NULL,&quot;
+                + SessionsColumns.SESSION_ID + &quot; TEXT NOT NULL,&quot;
+                + Sessions.BLOCK_ID + &quot; TEXT &quot; + References.BLOCK_ID + &quot;,&quot;
+                + Sessions.ROOM_ID + &quot; TEXT &quot; + References.ROOM_ID + &quot;,&quot;
+                + SessionsColumns.SESSION_LEVEL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_TITLE + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_ABSTRACT + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_REQUIREMENTS + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_KEYWORDS + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_HASHTAG + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_SLUG + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_MODERATOR_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_YOUTUBE_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_PDF_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_FEEDBACK_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_NOTES_URL + &quot; TEXT,&quot;
+                + SessionsColumns.SESSION_STARRED + &quot; INTEGER NOT NULL DEFAULT 0,&quot;
+                + &quot;UNIQUE (&quot; + SessionsColumns.SESSION_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L230">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.SPEAKERS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SyncColumns.UPDATED + &quot; INTEGER NOT NULL,&quot;
+                + SpeakersColumns.SPEAKER_ID + &quot; TEXT NOT NULL,&quot;
+                + SpeakersColumns.SPEAKER_NAME + &quot; TEXT,&quot;
+                + SpeakersColumns.SPEAKER_IMAGE_URL + &quot; TEXT,&quot;
+                + SpeakersColumns.SPEAKER_COMPANY + &quot; TEXT,&quot;
+                + SpeakersColumns.SPEAKER_ABSTRACT + &quot; TEXT,&quot;
+                + SpeakersColumns.SPEAKER_URL+ &quot; TEXT,&quot;
+                + &quot;UNIQUE (&quot; + SpeakersColumns.SPEAKER_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L241">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.SESSIONS_SPEAKERS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SessionsSpeakers.SESSION_ID + &quot; TEXT NOT NULL &quot; + References.SESSION_ID + &quot;,&quot;
+                + SessionsSpeakers.SPEAKER_ID + &quot; TEXT NOT NULL &quot; + References.SPEAKER_ID + &quot;,&quot;
+                + &quot;UNIQUE (&quot; + SessionsSpeakers.SESSION_ID + &quot;,&quot;
+                        + SessionsSpeakers.SPEAKER_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L248">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.SESSIONS_TRACKS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SessionsTracks.SESSION_ID + &quot; TEXT NOT NULL &quot; + References.SESSION_ID + &quot;,&quot;
+                + SessionsTracks.TRACK_ID + &quot; TEXT NOT NULL &quot; + References.TRACK_ID + &quot;,&quot;
+                + &quot;UNIQUE (&quot; + SessionsTracks.SESSION_ID + &quot;,&quot;
+                        + SessionsTracks.TRACK_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L255">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.VENDORS + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SyncColumns.UPDATED + &quot; INTEGER NOT NULL,&quot;
+                + VendorsColumns.VENDOR_ID + &quot; TEXT NOT NULL,&quot;
+                + Vendors.TRACK_ID + &quot; TEXT &quot; + References.TRACK_ID + &quot;,&quot;
+                + VendorsColumns.VENDOR_NAME + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_LOCATION + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_DESC + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_URL + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_PRODUCT_DESC + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_LOGO_URL + &quot; TEXT,&quot;
+                + VendorsColumns.VENDOR_STARRED + &quot; INTEGER,&quot;
+                + &quot;UNIQUE (&quot; + VendorsColumns.VENDOR_ID + &quot;) ON CONFLICT REPLACE)&quot;);
+
+<span class="fc" id="L269">        createSessionsSearch(db);</span>
+<span class="fc" id="L270">        createVendorsSearch(db);</span>
+
+<span class="fc" id="L272">        db.execSQL(&quot;CREATE TABLE &quot; + Tables.SEARCH_SUGGEST + &quot; (&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SearchManager.SUGGEST_COLUMN_TEXT_1 + &quot; TEXT NOT NULL)&quot;);
+
+<span class="fc" id="L276">    }</span>
+
+    /**
+     * Create triggers that automatically build {@link Tables#SESSIONS_SEARCH}
+     * as values are changed in {@link Tables#SESSIONS}.
+     */
+    private static void createSessionsSearch(SQLiteDatabase db) {
+        // Using the &quot;porter&quot; tokenizer for simple stemming, so that
+        // &quot;frustration&quot; matches &quot;frustrated.&quot;
+
+<span class="fc" id="L286">        db.execSQL(&quot;CREATE VIRTUAL TABLE &quot; + Tables.SESSIONS_SEARCH + &quot; USING fts3(&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + SessionsSearchColumns.BODY + &quot; TEXT NOT NULL,&quot;
+                + SessionsSearchColumns.SESSION_ID
+                        + &quot; TEXT NOT NULL &quot; + References.SESSION_ID + &quot;,&quot;
+                + &quot;UNIQUE (&quot; + SessionsSearchColumns.SESSION_ID + &quot;) ON CONFLICT REPLACE,&quot;
+                + &quot;tokenize=porter)&quot;);
+
+        // TODO: handle null fields in body, which cause trigger to fail
+        // TODO: implement update trigger, not currently exercised
+
+<span class="fc" id="L297">        db.execSQL(&quot;CREATE TRIGGER &quot; + Triggers.SESSIONS_SEARCH_INSERT + &quot; AFTER INSERT ON &quot;</span>
+                + Tables.SESSIONS + &quot; BEGIN INSERT INTO &quot; + Qualified.SESSIONS_SEARCH + &quot; &quot;
+                + &quot; VALUES(new.&quot; + Sessions.SESSION_ID + &quot;, &quot; + Subquery.SESSIONS_BODY + &quot;);&quot;
+                + &quot; END;&quot;);
+
+<span class="fc" id="L302">        db.execSQL(&quot;CREATE TRIGGER &quot; + Triggers.SESSIONS_SEARCH_DELETE + &quot; AFTER DELETE ON &quot;</span>
+                + Tables.SESSIONS + &quot; BEGIN DELETE FROM &quot; + Tables.SESSIONS_SEARCH + &quot; &quot;
+                + &quot; WHERE &quot; + Qualified.SESSIONS_SEARCH_SESSION_ID + &quot;=old.&quot; + Sessions.SESSION_ID
+                + &quot;;&quot; + &quot; END;&quot;);
+
+<span class="fc" id="L307">        db.execSQL(&quot;CREATE TRIGGER &quot; + Triggers.SESSIONS_SEARCH_UPDATE </span>
+                + &quot; AFTER UPDATE ON &quot; + Tables.SESSIONS
+                + &quot; BEGIN UPDATE sessions_search SET &quot; + SessionsSearchColumns.BODY  + &quot; = &quot;
+                + Subquery.SESSIONS_BODY + &quot; WHERE session_id = old.session_id&quot;
+                + &quot;; END;&quot;);
+
+<span class="fc" id="L313">    }</span>
+
+    /**
+     * Create triggers that automatically build {@link Tables#VENDORS_SEARCH} as
+     * values are changed in {@link Tables#VENDORS}.
+     */
+    private static void createVendorsSearch(SQLiteDatabase db) {
+        // Using the &quot;porter&quot; tokenizer for simple stemming, so that
+        // &quot;frustration&quot; matches &quot;frustrated.&quot;
+
+<span class="fc" id="L323">        db.execSQL(&quot;CREATE VIRTUAL TABLE &quot; + Tables.VENDORS_SEARCH + &quot; USING fts3(&quot;</span>
+                + BaseColumns._ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT,&quot;
+                + VendorsSearchColumns.BODY + &quot; TEXT NOT NULL,&quot;
+                + VendorsSearchColumns.VENDOR_ID
+                        + &quot; TEXT NOT NULL &quot; + References.VENDOR_ID + &quot;,&quot;
+                + &quot;UNIQUE (&quot; + VendorsSearchColumns.VENDOR_ID + &quot;) ON CONFLICT REPLACE,&quot;
+                + &quot;tokenize=porter)&quot;);
+
+        // TODO: handle null fields in body, which cause trigger to fail
+        // TODO: implement update trigger, not currently exercised
+
+<span class="fc" id="L334">        db.execSQL(&quot;CREATE TRIGGER &quot; + Triggers.VENDORS_SEARCH_INSERT + &quot; AFTER INSERT ON &quot;</span>
+                + Tables.VENDORS + &quot; BEGIN INSERT INTO &quot; + Qualified.VENDORS_SEARCH + &quot; &quot;
+                + &quot; VALUES(new.&quot; + Vendors.VENDOR_ID + &quot;, &quot; + Subquery.VENDORS_BODY + &quot;);&quot;
+                + &quot; END;&quot;);
+
+<span class="fc" id="L339">        db.execSQL(&quot;CREATE TRIGGER &quot; + Triggers.VENDORS_SEARCH_DELETE + &quot; AFTER DELETE ON &quot;</span>
+                + Tables.VENDORS + &quot; BEGIN DELETE FROM &quot; + Tables.VENDORS_SEARCH + &quot; &quot;
+                + &quot; WHERE &quot; + Qualified.VENDORS_SEARCH_VENDOR_ID + &quot;=old.&quot; + Vendors.VENDOR_ID
+                + &quot;;&quot; + &quot; END;&quot;);
+
+<span class="fc" id="L344">    }</span>
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+<span class="nc" id="L348">        Log.d(TAG, &quot;onUpgrade() from &quot; + oldVersion + &quot; to &quot; + newVersion);</span>
+
+        // NOTE: This switch statement is designed to handle cascading database
+        // updates, starting at the current version and falling through to all
+        // future upgrade cases. Only use &quot;break;&quot; when you want to drop and
+        // recreate the entire database.
+<span class="nc" id="L354">        int version = oldVersion;</span>
+
+<span class="nc bnc" id="L356" title="All 3 branches missed.">        switch (version) {</span>
+            case VER_LAUNCH:
+                // Version 22 added column for session feedback URL.
+<span class="nc" id="L359">                db.execSQL(&quot;ALTER TABLE &quot; + Tables.SESSIONS + &quot; ADD COLUMN &quot;</span>
+                        + SessionsColumns.SESSION_FEEDBACK_URL + &quot; TEXT&quot;);
+<span class="nc" id="L361">                version = VER_SESSION_FEEDBACK_URL;</span>
+
+            case VER_SESSION_FEEDBACK_URL:
+                // Version 23 added columns for session official notes URL and slug.
+<span class="nc" id="L365">                db.execSQL(&quot;ALTER TABLE &quot; + Tables.SESSIONS + &quot; ADD COLUMN &quot;</span>
+                        + SessionsColumns.SESSION_NOTES_URL + &quot; TEXT&quot;);
+<span class="nc" id="L367">                db.execSQL(&quot;ALTER TABLE &quot; + Tables.SESSIONS + &quot; ADD COLUMN &quot;</span>
+                        + SessionsColumns.SESSION_SLUG + &quot; TEXT&quot;);
+<span class="nc" id="L369">                version = VER_SESSION_NOTES_URL_SLUG;</span>
+        }
+
+<span class="nc" id="L372">        Log.d(TAG, &quot;after upgrade logic, at version &quot; + version);</span>
+<span class="nc bnc" id="L373" title="All 2 branches missed.">        if (version != DATABASE_VERSION) {</span>
+<span class="nc" id="L374">            Log.w(TAG, &quot;Destroying old data during upgrade&quot;);</span>
+
+<span class="nc" id="L376">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.BLOCKS);</span>
+<span class="nc" id="L377">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.TRACKS);</span>
+<span class="nc" id="L378">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.ROOMS);</span>
+<span class="nc" id="L379">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SESSIONS);</span>
+<span class="nc" id="L380">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SPEAKERS);</span>
+<span class="nc" id="L381">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SESSIONS_SPEAKERS);</span>
+<span class="nc" id="L382">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SESSIONS_TRACKS);</span>
+<span class="nc" id="L383">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.VENDORS);</span>
+
+<span class="nc" id="L385">            db.execSQL(&quot;DROP TRIGGER IF EXISTS &quot; + Triggers.SESSIONS_SEARCH_INSERT);</span>
+<span class="nc" id="L386">            db.execSQL(&quot;DROP TRIGGER IF EXISTS &quot; + Triggers.SESSIONS_SEARCH_DELETE);</span>
+<span class="nc" id="L387">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SESSIONS_SEARCH);</span>
+
+<span class="nc" id="L389">            db.execSQL(&quot;DROP TRIGGER IF EXISTS &quot; + Triggers.VENDORS_SEARCH_INSERT);</span>
+<span class="nc" id="L390">            db.execSQL(&quot;DROP TRIGGER IF EXISTS &quot; + Triggers.VENDORS_SEARCH_DELETE);</span>
+<span class="nc" id="L391">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.VENDORS_SEARCH);</span>
+
+<span class="nc" id="L393">            db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + Tables.SEARCH_SUGGEST);</span>
+
+<span class="nc" id="L395">            onCreate(db);</span>
+        }
+<span class="nc" id="L397">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

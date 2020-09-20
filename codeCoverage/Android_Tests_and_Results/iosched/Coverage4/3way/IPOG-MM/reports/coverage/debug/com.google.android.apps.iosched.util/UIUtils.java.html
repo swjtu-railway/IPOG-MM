@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UIUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">UIUtils.java</span></div><h1>UIUtils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract.Blocks;
+import com.google.android.apps.iosched.provider.ScheduleContract.Rooms;
+import com.google.android.apps.iosched.ui.phone.MapActivity;
+import com.google.android.apps.iosched.ui.tablet.MapMultiPaneActivity;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.os.Build;
+import android.preference.PreferenceManager;
+import android.text.Html;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
+import android.text.format.DateUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.StyleSpan;
+import android.widget.TextView;
+
+import java.util.Formatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+
+/**
+ * An assortment of UI helpers.
+ */
+<span class="nc" id="L55">public class UIUtils {</span>
+    /**
+     * Time zone to use when formatting all session times. To always use the
+     * phone local time, use {@link TimeZone#getDefault()}.
+     */
+<span class="fc" id="L60">    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone(&quot;America/Los_Angeles&quot;);</span>
+
+<span class="fc" id="L62">    public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(</span>
+            &quot;2011-05-10T09:00:00.000-07:00&quot;);
+<span class="fc" id="L64">    public static final long CONFERENCE_END_MILLIS = ParserUtils.parseTime(</span>
+            &quot;2011-05-11T17:30:00.000-07:00&quot;);
+
+<span class="fc" id="L67">    public static final Uri CONFERENCE_URL = Uri.parse(&quot;http://www.google.com/events/io/2011/&quot;);</span>
+
+    /** Flags used with {@link DateUtils#formatDateRange}. */
+    private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
+            | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY;
+
+    /** {@link StringBuilder} used for formatting time block. */
+<span class="fc" id="L74">    private static StringBuilder sBuilder = new StringBuilder(50);</span>
+    /** {@link Formatter} used for formatting time block. */
+<span class="fc" id="L76">    private static Formatter sFormatter = new Formatter(sBuilder, Locale.getDefault());</span>
+
+<span class="fc" id="L78">    private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);</span>
+
+    /**
+     * Format and return the given {@link Blocks} and {@link Rooms} values using
+     * {@link #CONFERENCE_TIME_ZONE}.
+     */
+    public static String formatSessionSubtitle(long blockStart, long blockEnd,
+            String roomName, Context context) {
+<span class="fc" id="L86">        TimeZone.setDefault(CONFERENCE_TIME_ZONE);</span>
+
+        // NOTE: There is an efficient version of formatDateRange in Eclair and
+        // beyond that allows you to recycle a StringBuilder.
+<span class="fc" id="L90">        final CharSequence timeString = DateUtils.formatDateRange(context,</span>
+                blockStart, blockEnd, TIME_FLAGS);
+
+<span class="fc" id="L93">        return context.getString(R.string.session_subtitle, timeString, roomName);</span>
+    }
+
+    /**
+     * Populate the given {@link TextView} with the requested text, formatting
+     * through {@link Html#fromHtml(String)} when applicable. Also sets
+     * {@link TextView#setMovementMethod} so inline links are handled.
+     */
+    public static void setTextMaybeHtml(TextView view, String text) {
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (TextUtils.isEmpty(text)) {</span>
+<span class="nc" id="L103">            view.setText(&quot;&quot;);</span>
+<span class="nc" id="L104">            return;</span>
+        }
+<span class="nc bnc" id="L106" title="All 4 branches missed.">        if (text.contains(&quot;&lt;&quot;) &amp;&amp; text.contains(&quot;&gt;&quot;)) {</span>
+<span class="nc" id="L107">            view.setText(Html.fromHtml(text));</span>
+<span class="nc" id="L108">            view.setMovementMethod(LinkMovementMethod.getInstance());</span>
+        } else {
+<span class="nc" id="L110">            view.setText(text);</span>
+        }
+<span class="nc" id="L112">    }</span>
+
+    public static void setSessionTitleColor(long blockStart, long blockEnd, TextView title,
+            TextView subtitle) {
+<span class="fc" id="L116">        long currentTimeMillis = System.currentTimeMillis();</span>
+<span class="fc" id="L117">        int colorId = R.color.body_text_1;</span>
+<span class="fc" id="L118">        int subColorId = R.color.body_text_2;</span>
+
+<span class="pc bpc" id="L120" title="3 of 4 branches missed.">        if (currentTimeMillis &gt; blockEnd &amp;&amp;</span>
+                currentTimeMillis &lt; CONFERENCE_END_MILLIS) {
+<span class="nc" id="L122">            colorId = subColorId = R.color.body_text_disabled;</span>
+        }
+
+<span class="fc" id="L125">        final Resources res = title.getResources();</span>
+<span class="fc" id="L126">        title.setTextColor(res.getColor(colorId));</span>
+<span class="fc" id="L127">        subtitle.setTextColor(res.getColor(subColorId));</span>
+<span class="fc" id="L128">    }</span>
+
+    /**
+     * Given a snippet string with matching segments surrounded by curly
+     * braces, turn those areas into bold spans, removing the curly braces.
+     */
+    public static Spannable buildStyledSnippet(String snippet) {
+<span class="nc" id="L135">        final SpannableStringBuilder builder = new SpannableStringBuilder(snippet);</span>
+
+        // Walk through string, inserting bold snippet spans
+<span class="nc" id="L138">        int startIndex = -1, endIndex = -1, delta = 0;</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        while ((startIndex = snippet.indexOf('{', endIndex)) != -1) {</span>
+<span class="nc" id="L140">            endIndex = snippet.indexOf('}', startIndex);</span>
+
+            // Remove braces from both sides
+<span class="nc" id="L143">            builder.delete(startIndex - delta, startIndex - delta + 1);</span>
+<span class="nc" id="L144">            builder.delete(endIndex - delta - 1, endIndex - delta);</span>
+
+            // Insert bold style
+<span class="nc" id="L147">            builder.setSpan(sBoldSpan, startIndex - delta, endIndex - delta - 1,</span>
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+<span class="nc" id="L150">            delta += 2;</span>
+        }
+
+<span class="nc" id="L153">        return builder;</span>
+    }
+
+    public static String getLastUsedTrackID(Context context) {
+<span class="nc" id="L157">        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);</span>
+<span class="nc" id="L158">        return sp.getString(&quot;last_track_id&quot;, null);</span>
+    }
+
+    public static void setLastUsedTrackID(Context context, String trackID) {
+<span class="nc" id="L162">        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);</span>
+<span class="nc" id="L163">        sp.edit().putString(&quot;last_track_id&quot;, trackID).commit();</span>
+<span class="nc" id="L164">    }</span>
+
+    private static final int BRIGHTNESS_THRESHOLD = 130;
+
+    /**
+     * Calculate whether a color is light or dark, based on a commonly known
+     * brightness formula.
+     *
+     * @see {@literal http://en.wikipedia.org/wiki/HSV_color_space%23Lightness}
+     */
+    public static boolean isColorDark(int color) {
+<span class="nc" id="L175">        return ((30 * Color.red(color) +</span>
+<span class="nc" id="L176">                59 * Color.green(color) +</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">                11 * Color.blue(color)) / 100) &lt;= BRIGHTNESS_THRESHOLD;</span>
+    }
+
+    public static boolean isHoneycomb() {
+        // Can use static final constants like HONEYCOMB, declared in later versions
+        // of the OS since they are inlined at compile time. This is guaranteed behavior.
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">        return Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.HONEYCOMB;</span>
+    }
+
+    public static boolean isTablet(Context context) {
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        return (context.getResources().getConfiguration().screenLayout</span>
+                &amp; Configuration.SCREENLAYOUT_SIZE_MASK)
+                &gt;= Configuration.SCREENLAYOUT_SIZE_LARGE;
+    }
+
+    public static boolean isHoneycombTablet(Context context) {
+<span class="pc bpc" id="L193" title="2 of 4 branches missed.">        return isHoneycomb() &amp;&amp; isTablet(context);</span>
+    }
+
+    public static long getCurrentTime(final Context context) {
+        //SharedPreferences prefs = context.getSharedPreferences(&quot;mock_data&quot;, 0);
+        //prefs.edit().commit();
+        //return prefs.getLong(&quot;mock_current_time&quot;, System.currentTimeMillis());
+<span class="fc" id="L200">        return System.currentTimeMillis();</span>
+    }
+
+    public static Drawable getIconForIntent(final Context context, Intent i) {
+<span class="fc" id="L204">        PackageManager pm = context.getPackageManager();</span>
+<span class="fc" id="L205">        List&lt;ResolveInfo&gt; infos = pm.queryIntentActivities(i, PackageManager.MATCH_DEFAULT_ONLY);</span>
+<span class="pc bpc" id="L206" title="1 of 2 branches missed.">        if (infos.size() &gt; 0) {</span>
+<span class="fc" id="L207">            return infos.get(0).loadIcon(pm);</span>
+        }
+<span class="nc" id="L209">        return null;</span>
+    }
+
+    public static Class getMapActivityClass(Context context) {
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">        if (UIUtils.isHoneycombTablet(context)) {</span>
+<span class="nc" id="L214">            return MapMultiPaneActivity.class;</span>
+        }
+
+<span class="fc" id="L217">        return MapActivity.class;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

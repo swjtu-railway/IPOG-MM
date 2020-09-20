@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AnalyticsUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">AnalyticsUtils.java</span></div><h1>AnalyticsUtils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.os.Build;
+import android.preference.PreferenceManager;
+import android.util.Log;
+
+/**
+ * Helper singleton class for the Google Analytics tracking library.
+ */
+public class AnalyticsUtils {
+    private static final String TAG = &quot;AnalyticsUtils&quot;;
+
+    GoogleAnalyticsTracker mTracker;
+    private Context mApplicationContext;
+
+    /**
+     * The analytics tracking code for the app.
+     */
+    // TODO: insert your Analytics UA code here.
+    private static final String UACODE = &quot;INSERT_YOUR_ANALYTICS_UA_CODE_HERE&quot;;
+
+    private static final int VISITOR_SCOPE = 1;
+    private static final String FIRST_RUN_KEY = &quot;firstRun&quot;;
+    private static final boolean ANALYTICS_ENABLED = true;
+
+    private static AnalyticsUtils sInstance;
+
+    /**
+     * Returns the global {@link AnalyticsUtils} singleton object, creating one if necessary.
+     */
+    public static AnalyticsUtils getInstance(Context context) {
+        if (!ANALYTICS_ENABLED) {
+            return sEmptyAnalyticsUtils;
+        }
+
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (sInstance == null) {</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">            if (context == null) {</span>
+<span class="nc" id="L59">                return sEmptyAnalyticsUtils;</span>
+            }
+<span class="fc" id="L61">            sInstance = new AnalyticsUtils(context);</span>
+        }
+
+<span class="fc" id="L64">        return sInstance;</span>
+    }
+
+<span class="fc" id="L67">    private AnalyticsUtils(Context context) {</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (context == null) {</span>
+            // This should only occur for the empty Analytics utils object.
+<span class="fc" id="L70">            return;</span>
+        }
+
+<span class="fc" id="L73">        mApplicationContext = context.getApplicationContext();</span>
+<span class="fc" id="L74">        mTracker = GoogleAnalyticsTracker.getInstance();</span>
+
+        // Unfortunately this needs to be synchronous.
+<span class="fc" id="L77">        mTracker.start(UACODE, 300, mApplicationContext);</span>
+
+<span class="fc" id="L79">        Log.d(TAG, &quot;Initializing Analytics&quot;);</span>
+
+        // Since visitor CV's should only be declared the first time an app runs, check if
+        // it's run before. Add as necessary.
+<span class="fc" id="L83">        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(</span>
+                mApplicationContext);
+<span class="fc" id="L85">        final boolean firstRun = prefs.getBoolean(FIRST_RUN_KEY, true);</span>
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if (firstRun) {</span>
+<span class="fc" id="L87">            Log.d(TAG, &quot;Analytics firstRun&quot;);</span>
+
+<span class="fc" id="L89">            String apiLevel = Integer.toString(Build.VERSION.SDK_INT);</span>
+<span class="fc" id="L90">            String model = Build.MODEL;</span>
+<span class="fc" id="L91">            mTracker.setCustomVar(1, &quot;apiLevel&quot;, apiLevel, VISITOR_SCOPE);</span>
+<span class="fc" id="L92">            mTracker.setCustomVar(2, &quot;model&quot;, model, VISITOR_SCOPE);</span>
+
+            // Close out so we never run this block again, unless app is removed &amp; =
+            // reinstalled.
+<span class="fc" id="L96">            prefs.edit().putBoolean(FIRST_RUN_KEY, false).commit();</span>
+        }
+<span class="fc" id="L98">    }</span>
+
+    public void trackEvent(final String category, final String action, final String label,
+            final int value) {
+        // We wrap the call in an AsyncTask since the Google Analytics library writes to disk
+        // on its calling thread.
+<span class="fc" id="L104">        new AsyncTask&lt;Void, Void, Void&gt;() {</span>
+            @Override
+            protected Void doInBackground(Void... voids) {
+                try {
+<span class="fc" id="L108">                    mTracker.trackEvent(category, action, label, value);</span>
+<span class="fc" id="L109">                    Log.d(TAG, &quot;iosched Analytics trackEvent: &quot;</span>
+                            + category + &quot; / &quot; + action + &quot; / &quot; + label + &quot; / &quot; + value);
+<span class="nc" id="L111">                } catch (Exception e) {</span>
+                    // We don't want to crash if there's an Analytics library exception.
+<span class="nc" id="L113">                    Log.w(TAG, &quot;iosched Analytics trackEvent error: &quot;</span>
+                            + category + &quot; / &quot; + action + &quot; / &quot; + label + &quot; / &quot; + value, e);
+<span class="fc" id="L115">                }</span>
+<span class="fc" id="L116">                return null;</span>
+            }
+<span class="fc" id="L118">        }.execute();</span>
+<span class="fc" id="L119">    }</span>
+
+    public void trackPageView(final String path) {
+        // We wrap the call in an AsyncTask since the Google Analytics library writes to disk
+        // on its calling thread.
+<span class="fc" id="L124">        new AsyncTask&lt;Void, Void, Void&gt;() {</span>
+            @Override
+            protected Void doInBackground(Void... voids) {
+                try {
+<span class="fc" id="L128">                    mTracker.trackPageView(path);</span>
+<span class="fc" id="L129">                    Log.d(TAG, &quot;iosched Analytics trackPageView: &quot; + path);</span>
+<span class="nc" id="L130">                } catch (Exception e) {</span>
+                    // We don't want to crash if there's an Analytics library exception.
+<span class="nc" id="L132">                    Log.w(TAG, &quot;iosched Analytics trackPageView error: &quot; + path, e);</span>
+<span class="fc" id="L133">                }</span>
+<span class="fc" id="L134">                return null;</span>
+            }
+<span class="fc" id="L136">        }.execute();</span>
+<span class="fc" id="L137">    }</span>
+
+    /**
+     * Empty instance for use when Analytics is disabled or there was no Context available.
+     */
+<span class="fc" id="L142">    private static AnalyticsUtils sEmptyAnalyticsUtils = new AnalyticsUtils(null) {</span>
+        @Override
+<span class="nc" id="L144">        public void trackEvent(String category, String action, String label, int value) {}</span>
+
+        @Override
+<span class="nc" id="L147">        public void trackPageView(String path) {}</span>
+    };
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

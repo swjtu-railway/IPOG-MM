@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CteObject id="c1"> 
+  <Tree root="c3" id="c2" name="p32_tree"> 
+    <Composition id="c3" name="p32" x="0" y="0"> 
+      <Composition id="c4" name="p32_sequence" x="0" y="0"> 
+        <Composition id="c5" name="DASHBOARD_click_Schedule_btn" x="0" y="0"/>  
+        <Composition id="c6" name="SCHEDULE_click_Search_btn" x="0" y="0"/>  
+        <Composition id="c7" name="SEARCH_click_Go_btn" x="0" y="0"/>  
+        <Composition id="c8" name="SEARCHRESULT_click_Search_btn" x="0" y="0"/> 
+      </Composition> 
+    </Composition> 
+  </Tree>  
+  <TestGroup id="c9" name="TG"/> 
+</CteObject>

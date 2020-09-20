@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SelectionBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">SelectionBuilder.java</span></div><h1>SelectionBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2011 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Modifications:
+ * -Imported from AOSP frameworks/base/core/java/com/android/internal/content
+ * -Changed package name
+ */
+
+package com.google.android.apps.iosched.util;
+
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.text.TextUtils;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
+
+/**
+ * Helper for building selection clauses for {@link SQLiteDatabase}. Each
+ * appended clause is combined using {@code AND}. This class is &lt;em&gt;not&lt;/em&gt;
+ * thread safe.
+ */
+<span class="fc" id="L40">public class SelectionBuilder {</span>
+    private static final String TAG = &quot;SelectionBuilder&quot;;
+    private static final boolean LOGV = false;
+
+<span class="fc" id="L44">    private String mTable = null;</span>
+<span class="fc" id="L45">    private Map&lt;String, String&gt; mProjectionMap = Maps.newHashMap();</span>
+<span class="fc" id="L46">    private StringBuilder mSelection = new StringBuilder();</span>
+<span class="fc" id="L47">    private ArrayList&lt;String&gt; mSelectionArgs = Lists.newArrayList();</span>
+
+    /**
+     * Reset any internal state, allowing this builder to be recycled.
+     */
+    public SelectionBuilder reset() {
+<span class="nc" id="L53">        mTable = null;</span>
+<span class="nc" id="L54">        mSelection.setLength(0);</span>
+<span class="nc" id="L55">        mSelectionArgs.clear();</span>
+<span class="nc" id="L56">        return this;</span>
+    }
+
+    /**
+     * Append the given selection clause to the internal state. Each clause is
+     * surrounded with parenthesis and combined using {@code AND}.
+     */
+    public SelectionBuilder where(String selection, String... selectionArgs) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (TextUtils.isEmpty(selection)) {</span>
+<span class="pc bpc" id="L65" title="3 of 4 branches missed.">            if (selectionArgs != null &amp;&amp; selectionArgs.length &gt; 0) {</span>
+<span class="nc" id="L66">                throw new IllegalArgumentException(</span>
+                        &quot;Valid selection required when including arguments=&quot;);
+            }
+
+            // Shortcut when clause is empty
+<span class="fc" id="L71">            return this;</span>
+        }
+
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (mSelection.length() &gt; 0) {</span>
+<span class="fc" id="L75">            mSelection.append(&quot; AND &quot;);</span>
+        }
+
+<span class="fc" id="L78">        mSelection.append(&quot;(&quot;).append(selection).append(&quot;)&quot;);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (selectionArgs != null) {</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            for (String arg : selectionArgs) {</span>
+<span class="fc" id="L81">                mSelectionArgs.add(arg);</span>
+            }
+        }
+
+<span class="fc" id="L85">        return this;</span>
+    }
+
+    public SelectionBuilder table(String table) {
+<span class="fc" id="L89">        mTable = table;</span>
+<span class="fc" id="L90">        return this;</span>
+    }
+
+    private void assertTable() {
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">        if (mTable == null) {</span>
+<span class="nc" id="L95">            throw new IllegalStateException(&quot;Table not specified&quot;);</span>
+        }
+<span class="fc" id="L97">    }</span>
+
+    public SelectionBuilder mapToTable(String column, String table) {
+<span class="fc" id="L100">        mProjectionMap.put(column, table + &quot;.&quot; + column);</span>
+<span class="fc" id="L101">        return this;</span>
+    }
+
+    public SelectionBuilder map(String fromColumn, String toClause) {
+<span class="fc" id="L105">        mProjectionMap.put(fromColumn, toClause + &quot; AS &quot; + fromColumn);</span>
+<span class="fc" id="L106">        return this;</span>
+    }
+
+    /**
+     * Return selection string for current internal state.
+     *
+     * @see #getSelectionArgs()
+     */
+    public String getSelection() {
+<span class="fc" id="L115">        return mSelection.toString();</span>
+    }
+
+    /**
+     * Return selection arguments for current internal state.
+     *
+     * @see #getSelection()
+     */
+    public String[] getSelectionArgs() {
+<span class="fc" id="L124">        return mSelectionArgs.toArray(new String[mSelectionArgs.size()]);</span>
+    }
+
+    private void mapColumns(String[] columns) {
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        for (int i = 0; i &lt; columns.length; i++) {</span>
+<span class="fc" id="L129">            final String target = mProjectionMap.get(columns[i]);</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">            if (target != null) {</span>
+<span class="fc" id="L131">                columns[i] = target;</span>
+            }
+        }
+<span class="fc" id="L134">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L138">        return &quot;SelectionBuilder[table=&quot; + mTable + &quot;, selection=&quot; + getSelection()</span>
+<span class="nc" id="L139">                + &quot;, selectionArgs=&quot; + Arrays.toString(getSelectionArgs()) + &quot;]&quot;;</span>
+    }
+
+    /**
+     * Execute query using the current internal state as {@code WHERE} clause.
+     */
+    public Cursor query(SQLiteDatabase db, String[] columns, String orderBy) {
+<span class="fc" id="L146">        return query(db, columns, null, null, orderBy, null);</span>
+    }
+
+    /**
+     * Execute query using the current internal state as {@code WHERE} clause.
+     */
+    public Cursor query(SQLiteDatabase db, String[] columns, String groupBy,
+            String having, String orderBy, String limit) {
+<span class="fc" id="L154">        assertTable();</span>
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">        if (columns != null) mapColumns(columns);</span>
+        if (LOGV) Log.v(TAG, &quot;query(columns=&quot; + Arrays.toString(columns) + &quot;) &quot; + this);
+<span class="fc" id="L157">        return db.query(mTable, columns, getSelection(), getSelectionArgs(), groupBy, having,</span>
+                orderBy, limit);
+    }
+
+    /**
+     * Execute update using the current internal state as {@code WHERE} clause.
+     */
+    public int update(SQLiteDatabase db, ContentValues values) {
+<span class="nc" id="L165">        assertTable();</span>
+        if (LOGV) Log.v(TAG, &quot;update() &quot; + this);
+<span class="nc" id="L167">        return db.update(mTable, values, getSelection(), getSelectionArgs());</span>
+    }
+
+    /**
+     * Execute delete using the current internal state as {@code WHERE} clause.
+     */
+    public int delete(SQLiteDatabase db) {
+<span class="fc" id="L174">        assertTable();</span>
+        if (LOGV) Log.v(TAG, &quot;delete() &quot; + this);
+<span class="fc" id="L176">        return db.delete(mTable, getSelection(), getSelectionArgs());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

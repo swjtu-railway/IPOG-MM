@@ -1,0 +1,744 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SessionDetailFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">SessionDetailFragment.java</span></div><h1>SessionDetailFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.util.ActivityHelper;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.BitmapUtils;
+import com.google.android.apps.iosched.util.CatchNotesHelper;
+import com.google.android.apps.iosched.util.FractionalTouchDelegate;
+import com.google.android.apps.iosched.util.NotifyingAsyncQueryHandler;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.BroadcastReceiver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.StyleSpan;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.TabHost;
+import android.widget.TextView;
+
+/**
+ * A fragment that shows detail information for a session, including session title, abstract,
+ * time information, speaker photos and bios, etc.
+ */
+<span class="fc" id="L62">public class SessionDetailFragment extends Fragment implements</span>
+        NotifyingAsyncQueryHandler.AsyncQueryListener,
+        CompoundButton.OnCheckedChangeListener {
+    private static final String TAG = &quot;SessionDetailFragment&quot;;
+
+    /**
+     * Since sessions can belong tracks, the parent activity can send this extra specifying a
+     * track URI that should be used for coloring the title-bar.
+     */
+    public static final String EXTRA_TRACK = &quot;com.google.android.iosched.extra.TRACK&quot;;
+
+    private static final String TAG_SUMMARY = &quot;summary&quot;;
+    private static final String TAG_NOTES = &quot;notes&quot;;
+    private static final String TAG_LINKS = &quot;links&quot;;
+
+<span class="fc" id="L77">    private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);</span>
+
+    private String mSessionId;
+    private Uri mSessionUri;
+    private Uri mTrackUri;
+
+    private String mTitleString;
+    private String mHashtag;
+    private String mUrl;
+    private TextView mTagDisplay;
+    private String mRoomId;
+
+    private ViewGroup mRootView;
+    private TabHost mTabHost;
+    private TextView mTitle;
+    private TextView mSubtitle;
+    private CompoundButton mStarred;
+    
+    private TextView mAbstract;
+    private TextView mRequirements;
+
+    private NotifyingAsyncQueryHandler mHandler;
+
+<span class="fc" id="L100">    private boolean mSessionCursor = false;</span>
+<span class="fc" id="L101">    private boolean mSpeakersCursor = false;</span>
+<span class="fc" id="L102">    private boolean mHasSummaryContent = false;</span>
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L106">        super.onCreate(savedInstanceState);</span>
+
+<span class="fc" id="L108">        final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());</span>
+<span class="fc" id="L109">        mSessionUri = intent.getData();</span>
+<span class="fc" id="L110">        mTrackUri = resolveTrackUri(intent);</span>
+
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (mSessionUri == null) {</span>
+<span class="nc" id="L113">            return;</span>
+        }
+
+<span class="fc" id="L116">        mSessionId = ScheduleContract.Sessions.getSessionId(mSessionUri);</span>
+
+<span class="fc" id="L118">        setHasOptionsMenu(true);</span>
+<span class="fc" id="L119">    }</span>
+
+    @Override
+    public void onResume() {
+<span class="fc" id="L123">        super.onResume();</span>
+<span class="fc" id="L124">        updateNotesTab();</span>
+
+        // Start listening for time updates to adjust &quot;now&quot; bar. TIME_TICK is
+        // triggered once per minute, which is how we move the bar over time.
+<span class="fc" id="L128">        final IntentFilter filter = new IntentFilter();</span>
+<span class="fc" id="L129">        filter.addAction(Intent.ACTION_PACKAGE_ADDED);</span>
+<span class="fc" id="L130">        filter.addAction(Intent.ACTION_PACKAGE_REMOVED);</span>
+<span class="fc" id="L131">        filter.addAction(Intent.ACTION_PACKAGE_REPLACED);</span>
+<span class="fc" id="L132">        filter.addDataScheme(&quot;package&quot;);</span>
+<span class="fc" id="L133">        getActivity().registerReceiver(mPackageChangesReceiver, filter);</span>
+<span class="fc" id="L134">    }</span>
+
+    @Override
+    public void onPause() {
+<span class="fc" id="L138">        super.onPause();</span>
+<span class="fc" id="L139">        getActivity().unregisterReceiver(mPackageChangesReceiver);</span>
+<span class="fc" id="L140">    }</span>
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+<span class="fc" id="L144">        super.onActivityCreated(savedInstanceState);</span>
+
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">        if (mSessionUri == null) {</span>
+<span class="nc" id="L147">            return;</span>
+        }
+
+        // Start background queries to load session and track details
+<span class="fc" id="L151">        final Uri speakersUri = ScheduleContract.Sessions.buildSpeakersDirUri(mSessionId);</span>
+
+<span class="fc" id="L153">        mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);</span>
+<span class="fc" id="L154">        mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);</span>
+<span class="fc" id="L155">        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);</span>
+<span class="fc" id="L156">        mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);</span>
+<span class="fc" id="L157">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+
+<span class="fc" id="L163">        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_session_detail, null);</span>
+<span class="fc" id="L164">        mTabHost = (TabHost) mRootView.findViewById(android.R.id.tabhost);</span>
+<span class="fc" id="L165">        mTabHost.setup();</span>
+
+<span class="fc" id="L167">        mTitle = (TextView) mRootView.findViewById(R.id.session_title);</span>
+<span class="fc" id="L168">        mSubtitle = (TextView) mRootView.findViewById(R.id.session_subtitle);</span>
+<span class="fc" id="L169">        mStarred = (CompoundButton) mRootView.findViewById(R.id.star_button);</span>
+
+<span class="fc" id="L171">        mStarred.setFocusable(true);</span>
+<span class="fc" id="L172">        mStarred.setClickable(true);</span>
+
+        // Larger target triggers star toggle
+<span class="fc" id="L175">        final View starParent = mRootView.findViewById(R.id.header_session);</span>
+<span class="fc" id="L176">        FractionalTouchDelegate.setupDelegate(starParent, mStarred, new RectF(0.6f, 0f, 1f, 0.8f));</span>
+
+<span class="fc" id="L178">        mAbstract = (TextView) mRootView.findViewById(R.id.session_abstract);</span>
+<span class="fc" id="L179">        mRequirements = (TextView) mRootView.findViewById(R.id.session_requirements);</span>
+
+<span class="fc" id="L181">        setupSummaryTab();</span>
+<span class="fc" id="L182">        setupNotesTab();</span>
+<span class="fc" id="L183">        setupLinksTab();</span>
+
+<span class="fc" id="L185">        return mRootView;</span>
+    }
+
+    /**
+     * Build and add &quot;summary&quot; tab.
+     */
+    private void setupSummaryTab() {
+        // Summary content comes from existing layout
+<span class="fc" id="L193">        mTabHost.addTab(mTabHost.newTabSpec(TAG_SUMMARY)</span>
+<span class="fc" id="L194">                .setIndicator(buildIndicator(R.string.session_summary))</span>
+<span class="fc" id="L195">                .setContent(R.id.tab_session_summary));</span>
+<span class="fc" id="L196">    }</span>
+
+    /**
+     * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
+     * its label.
+     *
+     * @param textRes
+     * @return View
+     */
+    private View buildIndicator(int textRes) {
+<span class="fc" id="L206">        final TextView indicator = (TextView) getActivity().getLayoutInflater()</span>
+<span class="fc" id="L207">                .inflate(R.layout.tab_indicator,</span>
+<span class="fc" id="L208">                        (ViewGroup) mRootView.findViewById(android.R.id.tabs), false);</span>
+<span class="fc" id="L209">        indicator.setText(textRes);</span>
+<span class="fc" id="L210">        return indicator;</span>
+    }
+
+    /**
+     * Derive {@link com.google.android.apps.iosched.provider.ScheduleContract.Tracks#CONTENT_ITEM_TYPE}
+     * {@link Uri} based on incoming {@link Intent}, using
+     * {@link #EXTRA_TRACK} when set.
+     * @param intent
+     * @return Uri
+     */
+    private Uri resolveTrackUri(Intent intent) {
+<span class="fc" id="L221">        final Uri trackUri = intent.getParcelableExtra(EXTRA_TRACK);</span>
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">        if (trackUri != null) {</span>
+<span class="fc" id="L223">            return trackUri;</span>
+        } else {
+<span class="nc" id="L225">            return ScheduleContract.Sessions.buildTracksDirUri(mSessionId);</span>
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="pc bpc" id="L233" title="1 of 2 branches missed.">        if (getActivity() == null) {</span>
+<span class="nc" id="L234">            return;</span>
+        }
+
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        if (token == SessionsQuery._TOKEN) {</span>
+<span class="fc" id="L238">            onSessionQueryComplete(cursor);</span>
+<span class="fc bfc" id="L239" title="All 2 branches covered.">        } else if (token == TracksQuery._TOKEN) {</span>
+<span class="fc" id="L240">            onTrackQueryComplete(cursor);</span>
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">        } else if (token == SpeakersQuery._TOKEN) {</span>
+<span class="fc" id="L242">            onSpeakersQueryComplete(cursor);</span>
+        } else {
+<span class="nc" id="L244">            cursor.close();</span>
+        }
+<span class="fc" id="L246">    }</span>
+
+    /**
+     * Handle {@link SessionsQuery} {@link Cursor}.
+     */
+    private void onSessionQueryComplete(Cursor cursor) {
+        try {
+<span class="fc" id="L253">            mSessionCursor = true;</span>
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">            if (!cursor.moveToFirst()) {</span>
+<span class="nc" id="L255">                return;</span>
+            }
+
+            // Format time block this session occupies
+<span class="fc" id="L259">            final long blockStart = cursor.getLong(SessionsQuery.BLOCK_START);</span>
+<span class="fc" id="L260">            final long blockEnd = cursor.getLong(SessionsQuery.BLOCK_END);</span>
+<span class="fc" id="L261">            final String roomName = cursor.getString(SessionsQuery.ROOM_NAME);</span>
+<span class="fc" id="L262">            final String subtitle = UIUtils.formatSessionSubtitle(blockStart,</span>
+<span class="fc" id="L263">                    blockEnd, roomName, getActivity());</span>
+
+<span class="fc" id="L265">            mTitleString = cursor.getString(SessionsQuery.TITLE);</span>
+<span class="fc" id="L266">            mTitle.setText(mTitleString);</span>
+<span class="fc" id="L267">            mSubtitle.setText(subtitle);</span>
+
+<span class="fc" id="L269">            mUrl = cursor.getString(SessionsQuery.URL);</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">            if (TextUtils.isEmpty(mUrl)) {</span>
+<span class="fc" id="L271">                mUrl = &quot;&quot;;</span>
+            }
+
+<span class="fc" id="L274">            mHashtag = cursor.getString(SessionsQuery.HASHTAG);</span>
+<span class="fc" id="L275">            mTagDisplay = (TextView) mRootView.findViewById(R.id.session_tags_button);</span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">            if (!TextUtils.isEmpty(mHashtag)) {</span>
+                // Create the button text
+<span class="nc" id="L278">                SpannableStringBuilder sb = new SpannableStringBuilder();</span>
+<span class="nc" id="L279">                sb.append(getString(R.string.tag_stream) + &quot; &quot;);</span>
+<span class="nc" id="L280">                int boldStart = sb.length();</span>
+<span class="nc" id="L281">                sb.append(getHashtagsString());</span>
+<span class="nc" id="L282">                sb.setSpan(sBoldSpan, boldStart, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);</span>
+
+<span class="nc" id="L284">                mTagDisplay.setText(sb);</span>
+
+<span class="nc" id="L286">                mTagDisplay.setOnClickListener(new View.OnClickListener() {</span>
+                    public void onClick(View v) {
+<span class="nc" id="L288">                        Intent intent = new Intent(getActivity(), TagStreamActivity.class);</span>
+<span class="nc" id="L289">                        intent.putExtra(TagStreamFragment.EXTRA_QUERY, getHashtagsString());</span>
+<span class="nc" id="L290">                        startActivity(intent);</span>
+<span class="nc" id="L291">                    }</span>
+                });
+<span class="nc" id="L293">            } else {</span>
+<span class="fc" id="L294">                mTagDisplay.setVisibility(View.GONE);</span>
+            }
+
+<span class="fc" id="L297">            mRoomId = cursor.getString(SessionsQuery.ROOM_ID);</span>
+
+            // Unregister around setting checked state to avoid triggering
+            // listener since change isn't user generated.
+<span class="fc" id="L301">            mStarred.setOnCheckedChangeListener(null);</span>
+<span class="fc bfc" id="L302" title="All 2 branches covered.">            mStarred.setChecked(cursor.getInt(SessionsQuery.STARRED) != 0);</span>
+<span class="fc" id="L303">            mStarred.setOnCheckedChangeListener(this);</span>
+
+<span class="fc" id="L305">            final String sessionAbstract = cursor.getString(SessionsQuery.ABSTRACT);</span>
+<span class="pc bpc" id="L306" title="1 of 2 branches missed.">            if (!TextUtils.isEmpty(sessionAbstract)) {</span>
+<span class="nc" id="L307">                UIUtils.setTextMaybeHtml(mAbstract, sessionAbstract);</span>
+<span class="nc" id="L308">                mAbstract.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L309">                mHasSummaryContent = true;</span>
+            } else {
+<span class="fc" id="L311">                mAbstract.setVisibility(View.GONE);</span>
+            }
+
+<span class="fc" id="L314">            final View requirementsBlock = mRootView.findViewById(R.id.session_requirements_block);</span>
+<span class="fc" id="L315">            final String sessionRequirements = cursor.getString(SessionsQuery.REQUIREMENTS);</span>
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">            if (!TextUtils.isEmpty(sessionRequirements)) {</span>
+<span class="nc" id="L317">                UIUtils.setTextMaybeHtml(mRequirements, sessionRequirements);</span>
+<span class="nc" id="L318">                requirementsBlock.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L319">                mHasSummaryContent = true;</span>
+            } else {
+<span class="fc" id="L321">                requirementsBlock.setVisibility(View.GONE);</span>
+            }
+
+            // Show empty message when all data is loaded, and nothing to show
+<span class="pc bpc" id="L325" title="3 of 4 branches missed.">            if (mSpeakersCursor &amp;&amp; !mHasSummaryContent) {</span>
+<span class="nc" id="L326">                mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);</span>
+            }
+
+<span class="fc" id="L329">            AnalyticsUtils.getInstance(getActivity()).trackPageView(&quot;/Sessions/&quot; + mTitleString);</span>
+
+<span class="fc" id="L331">            updateLinksTab(cursor);</span>
+<span class="fc" id="L332">            updateNotesTab();</span>
+
+        } finally {
+<span class="pc" id="L335">            cursor.close();</span>
+<span class="pc" id="L336">        }</span>
+<span class="fc" id="L337">    }</span>
+
+    /**
+     * Handle {@link TracksQuery} {@link Cursor}.
+     */
+    private void onTrackQueryComplete(Cursor cursor) {
+        try {
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            if (!cursor.moveToFirst()) {</span>
+<span class="fc" id="L345">                return;</span>
+            }
+
+            // Use found track to build title-bar
+<span class="fc" id="L349">            ActivityHelper activityHelper = ((BaseActivity) getActivity()).getActivityHelper();</span>
+<span class="fc" id="L350">            activityHelper.setActionBarTitle(cursor.getString(TracksQuery.TRACK_NAME));</span>
+<span class="fc" id="L351">            activityHelper.setActionBarColor(cursor.getInt(TracksQuery.TRACK_COLOR));</span>
+        } finally {
+<span class="pc" id="L353">            cursor.close();</span>
+<span class="pc" id="L354">        }</span>
+<span class="fc" id="L355">    }</span>
+
+    private void onSpeakersQueryComplete(Cursor cursor) {
+        try {
+<span class="fc" id="L359">            mSpeakersCursor = true;</span>
+            // TODO: remove any existing speakers from layout, since this cursor
+            // might be from a data change notification.
+<span class="fc" id="L362">            final ViewGroup speakersGroup = (ViewGroup)</span>
+<span class="fc" id="L363">                    mRootView.findViewById(R.id.session_speakers_block);</span>
+<span class="fc" id="L364">            final LayoutInflater inflater = getActivity().getLayoutInflater();</span>
+
+<span class="fc" id="L366">            boolean hasSpeakers = false;</span>
+
+<span class="pc bpc" id="L368" title="1 of 2 branches missed.">            while (cursor.moveToNext()) {</span>
+<span class="nc" id="L369">                final String speakerName = cursor.getString(SpeakersQuery.SPEAKER_NAME);</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">                if (TextUtils.isEmpty(speakerName)) {</span>
+<span class="nc" id="L371">                    continue;</span>
+                }
+
+<span class="nc" id="L374">                final String speakerImageUrl = cursor.getString(SpeakersQuery.SPEAKER_IMAGE_URL);</span>
+<span class="nc" id="L375">                final String speakerCompany = cursor.getString(SpeakersQuery.SPEAKER_COMPANY);</span>
+<span class="nc" id="L376">                final String speakerUrl = cursor.getString(SpeakersQuery.SPEAKER_URL);</span>
+<span class="nc" id="L377">                final String speakerAbstract = cursor.getString(SpeakersQuery.SPEAKER_ABSTRACT);</span>
+
+<span class="nc" id="L379">                String speakerHeader = speakerName;</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">                if (!TextUtils.isEmpty(speakerCompany)) {</span>
+<span class="nc" id="L381">                    speakerHeader += &quot;, &quot; + speakerCompany;</span>
+                }
+
+<span class="nc" id="L384">                final View speakerView = inflater</span>
+<span class="nc" id="L385">                        .inflate(R.layout.speaker_detail, speakersGroup, false);</span>
+<span class="nc" id="L386">                final TextView speakerHeaderView = (TextView) speakerView</span>
+<span class="nc" id="L387">                        .findViewById(R.id.speaker_header);</span>
+<span class="nc" id="L388">                final ImageView speakerImgView = (ImageView) speakerView</span>
+<span class="nc" id="L389">                        .findViewById(R.id.speaker_image);</span>
+<span class="nc" id="L390">                final TextView speakerUrlView = (TextView) speakerView</span>
+<span class="nc" id="L391">                        .findViewById(R.id.speaker_url);</span>
+<span class="nc" id="L392">                final TextView speakerAbstractView = (TextView) speakerView</span>
+<span class="nc" id="L393">                        .findViewById(R.id.speaker_abstract);</span>
+
+<span class="nc bnc" id="L395" title="All 2 branches missed.">                if (!TextUtils.isEmpty(speakerImageUrl)) {</span>
+<span class="nc" id="L396">                    BitmapUtils.fetchImage(getActivity(), speakerImageUrl, null, null,</span>
+<span class="nc" id="L397">                            new BitmapUtils.OnFetchCompleteListener() {</span>
+                                public void onFetchComplete(Object cookie, Bitmap result) {
+<span class="nc bnc" id="L399" title="All 2 branches missed.">                                    if (result != null) {</span>
+<span class="nc" id="L400">                                        speakerImgView.setImageBitmap(result);</span>
+                                    }
+<span class="nc" id="L402">                                }</span>
+                            });
+                }
+
+<span class="nc" id="L406">                speakerHeaderView.setText(speakerHeader);</span>
+<span class="nc" id="L407">                UIUtils.setTextMaybeHtml(speakerAbstractView, speakerAbstract);</span>
+
+<span class="nc bnc" id="L409" title="All 2 branches missed.">                if (!TextUtils.isEmpty(speakerUrl)) {</span>
+<span class="nc" id="L410">                    UIUtils.setTextMaybeHtml(speakerUrlView, speakerUrl);</span>
+<span class="nc" id="L411">                    speakerUrlView.setVisibility(View.VISIBLE);</span>
+                } else {
+<span class="nc" id="L413">                    speakerUrlView.setVisibility(View.GONE);</span>
+                }
+
+<span class="nc" id="L416">                speakersGroup.addView(speakerView);</span>
+<span class="nc" id="L417">                hasSpeakers = true;</span>
+<span class="nc" id="L418">                mHasSummaryContent = true;</span>
+<span class="nc" id="L419">            }</span>
+
+<span class="pc bpc" id="L421" title="1 of 2 branches missed.">            speakersGroup.setVisibility(hasSpeakers ? View.VISIBLE : View.GONE);</span>
+
+            // Show empty message when all data is loaded, and nothing to show
+<span class="pc bpc" id="L424" title="2 of 4 branches missed.">            if (mSessionCursor &amp;&amp; !mHasSummaryContent) {</span>
+<span class="fc" id="L425">                mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);</span>
+            }
+        } finally {
+<span class="pc bpc" id="L428" title="3 of 4 branches missed.">            if (null != cursor) {</span>
+<span class="pc" id="L429">                cursor.close();</span>
+            }
+<span class="nc" id="L431">        }</span>
+<span class="fc" id="L432">    }</span>
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+<span class="fc" id="L436">        inflater.inflate(R.menu.session_detail_menu_items, menu);</span>
+<span class="fc" id="L437">        super.onCreateOptionsMenu(menu, inflater);</span>
+<span class="fc" id="L438">    }</span>
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        final String shareString;
+        final Intent intent;
+
+<span class="nc bnc" id="L445" title="All 3 branches missed.">        switch (item.getItemId()) {</span>
+            case R.id.menu_map:
+<span class="nc" id="L447">                intent = new Intent(getActivity().getApplicationContext(),</span>
+<span class="nc" id="L448">                        UIUtils.getMapActivityClass(getActivity()));</span>
+<span class="nc" id="L449">                intent.putExtra(MapFragment.EXTRA_ROOM, mRoomId);</span>
+<span class="nc" id="L450">                startActivity(intent);</span>
+<span class="nc" id="L451">                return true;</span>
+
+            case R.id.menu_share:
+                // TODO: consider bringing in shortlink to session
+<span class="nc" id="L455">                shareString = getString(R.string.share_template, mTitleString, getHashtagsString(),</span>
+                        mUrl);
+<span class="nc" id="L457">                intent = new Intent(Intent.ACTION_SEND);</span>
+<span class="nc" id="L458">                intent.setType(&quot;text/plain&quot;);</span>
+<span class="nc" id="L459">                intent.putExtra(Intent.EXTRA_TEXT, shareString);</span>
+<span class="nc" id="L460">                startActivity(Intent.createChooser(intent, getText(R.string.title_share)));</span>
+<span class="nc" id="L461">                return true;</span>
+        }
+<span class="nc" id="L463">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    /**
+     * Handle toggling of starred checkbox.
+     */
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+<span class="fc" id="L470">        final ContentValues values = new ContentValues();</span>
+<span class="fc bfc" id="L471" title="All 2 branches covered.">        values.put(ScheduleContract.Sessions.SESSION_STARRED, isChecked ? 1 : 0);</span>
+<span class="fc" id="L472">        mHandler.startUpdate(mSessionUri, values);</span>
+
+        // Because change listener is set to null during initialization, these won't fire on
+        // pageview.
+<span class="fc bfc" id="L476" title="All 2 branches covered.">        AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+                &quot;Sandbox&quot;, isChecked ? &quot;Starred&quot; : &quot;Unstarred&quot;, mTitleString, 0);
+<span class="fc" id="L478">    }</span>
+
+    /**
+     * Build and add &quot;notes&quot; tab.
+     */
+    private void setupNotesTab() {
+        // Make powered-by clickable
+<span class="fc" id="L485">        ((TextView) mRootView.findViewById(R.id.notes_powered_by)).setMovementMethod(</span>
+<span class="fc" id="L486">                LinkMovementMethod.getInstance());</span>
+
+        // Setup tab
+<span class="fc" id="L489">        mTabHost.addTab(mTabHost.newTabSpec(TAG_NOTES)</span>
+<span class="fc" id="L490">                .setIndicator(buildIndicator(R.string.session_notes))</span>
+<span class="fc" id="L491">                .setContent(R.id.tab_session_notes));</span>
+<span class="fc" id="L492">    }</span>
+
+    /*
+     * Event structure:
+     * Category -&gt; &quot;Session Details&quot;
+     * Action -&gt; &quot;Create Note&quot;, &quot;View Note&quot;, etc
+     * Label -&gt; Session's Title
+     * Value -&gt; 0.
+     */
+    public void fireNotesEvent(int actionId) {
+<span class="nc" id="L502">        AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+<span class="nc" id="L503">                &quot;Session Details&quot;, getActivity().getString(actionId), mTitleString, 0);</span>
+<span class="nc" id="L504">    }</span>
+
+    /*
+     * Event structure:
+     * Category -&gt; &quot;Session Details&quot;
+     * Action -&gt; Link Text
+     * Label -&gt; Session's Title
+     * Value -&gt; 0.
+     */
+    public void fireLinkEvent(int actionId) {
+<span class="nc" id="L514">        AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+<span class="nc" id="L515">                &quot;Link Details&quot;, getActivity().getString(actionId), mTitleString, 0);</span>
+<span class="nc" id="L516">    }</span>
+
+    private void updateNotesTab() {
+<span class="fc" id="L519">        final CatchNotesHelper helper = new CatchNotesHelper(getActivity());</span>
+<span class="fc" id="L520">        final boolean notesInstalled = helper.isNotesInstalledAndMinimumVersion();</span>
+
+<span class="fc" id="L522">        final Intent marketIntent = helper.notesMarketIntent();</span>
+<span class="fc" id="L523">        final Intent newIntent = helper.createNoteIntent(</span>
+<span class="fc" id="L524">                getString(R.string.note_template, mTitleString, getHashtagsString()));</span>
+        
+<span class="fc" id="L526">        final Intent viewIntent = helper.viewNotesIntent(getHashtagsString());</span>
+
+        // Set icons and click listeners
+<span class="fc" id="L529">        ((ImageView) mRootView.findViewById(R.id.notes_catch_market_icon)).setImageDrawable(</span>
+<span class="fc" id="L530">                UIUtils.getIconForIntent(getActivity(), marketIntent));</span>
+<span class="fc" id="L531">        ((ImageView) mRootView.findViewById(R.id.notes_catch_new_icon)).setImageDrawable(</span>
+<span class="fc" id="L532">                UIUtils.getIconForIntent(getActivity(), newIntent));</span>
+<span class="fc" id="L533">        ((ImageView) mRootView.findViewById(R.id.notes_catch_view_icon)).setImageDrawable(</span>
+<span class="fc" id="L534">                UIUtils.getIconForIntent(getActivity(), viewIntent));</span>
+
+        // Set click listeners
+<span class="fc" id="L537">        mRootView.findViewById(R.id.notes_catch_market_link).setOnClickListener(</span>
+<span class="fc" id="L538">                new View.OnClickListener() {</span>
+                    public void onClick(View view) {
+<span class="nc" id="L540">                        startActivity(marketIntent);</span>
+<span class="nc" id="L541">                        fireNotesEvent(R.string.notes_catch_market_title);</span>
+<span class="nc" id="L542">                    }</span>
+                });
+
+<span class="fc" id="L545">        mRootView.findViewById(R.id.notes_catch_new_link).setOnClickListener(</span>
+<span class="fc" id="L546">                new View.OnClickListener() {</span>
+                    public void onClick(View view) {
+<span class="nc" id="L548">                        startActivity(newIntent);</span>
+<span class="nc" id="L549">                        fireNotesEvent(R.string.notes_catch_new_title);</span>
+<span class="nc" id="L550">                    }</span>
+                });
+
+<span class="fc" id="L553">        mRootView.findViewById(R.id.notes_catch_view_link).setOnClickListener(</span>
+<span class="fc" id="L554">                new View.OnClickListener() {</span>
+                    public void onClick(View view) {
+<span class="nc" id="L556">                        startActivity(viewIntent);</span>
+<span class="nc" id="L557">                        fireNotesEvent(R.string.notes_catch_view_title);</span>
+<span class="nc" id="L558">                    }</span>
+                });
+
+        // Show/hide elements
+<span class="pc bpc" id="L562" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_market_link).setVisibility(</span>
+                notesInstalled ? View.GONE : View.VISIBLE);
+<span class="pc bpc" id="L564" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_market_separator).setVisibility(</span>
+                notesInstalled ? View.GONE : View.VISIBLE);
+
+<span class="pc bpc" id="L567" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_new_link).setVisibility(</span>
+                !notesInstalled ? View.GONE : View.VISIBLE);
+<span class="pc bpc" id="L569" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_new_separator).setVisibility(</span>
+                !notesInstalled ? View.GONE : View.VISIBLE);
+
+<span class="pc bpc" id="L572" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_view_link).setVisibility(</span>
+                !notesInstalled ? View.GONE : View.VISIBLE);
+<span class="pc bpc" id="L574" title="1 of 2 branches missed.">        mRootView.findViewById(R.id.notes_catch_view_separator).setVisibility(</span>
+                !notesInstalled ? View.GONE : View.VISIBLE);
+<span class="fc" id="L576">    }</span>
+
+    /**
+     * Build and add &quot;summary&quot; tab.
+     */
+    private void setupLinksTab() {
+        // Summary content comes from existing layout
+<span class="fc" id="L583">        mTabHost.addTab(mTabHost.newTabSpec(TAG_LINKS)</span>
+<span class="fc" id="L584">                .setIndicator(buildIndicator(R.string.session_links))</span>
+<span class="fc" id="L585">                .setContent(R.id.tab_session_links));</span>
+<span class="fc" id="L586">    }</span>
+
+    private void updateLinksTab(Cursor cursor) {
+<span class="fc" id="L589">        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.links_container);</span>
+
+        // Remove all views but the 'empty' view
+<span class="fc" id="L592">        int childCount = container.getChildCount();</span>
+<span class="pc bpc" id="L593" title="1 of 2 branches missed.">        if (childCount &gt; 1) {</span>
+<span class="nc" id="L594">            container.removeViews(1, childCount - 1);</span>
+        }
+
+<span class="fc" id="L597">        LayoutInflater inflater = getLayoutInflater();</span>
+
+<span class="fc" id="L599">        boolean hasLinks = false;</span>
+<span class="fc bfc" id="L600" title="All 2 branches covered.">        for (int i = 0; i &lt; SessionsQuery.LINKS_INDICES.length; i++) {</span>
+<span class="fc" id="L601">            final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);</span>
+<span class="pc bpc" id="L602" title="1 of 2 branches missed.">            if (!TextUtils.isEmpty(url)) {</span>
+<span class="nc" id="L603">                hasLinks = true;</span>
+<span class="nc" id="L604">                ViewGroup linkContainer = (ViewGroup)</span>
+<span class="nc" id="L605">                        inflater.inflate(R.layout.list_item_session_link, container, false);</span>
+<span class="nc" id="L606">                ((TextView) linkContainer.findViewById(R.id.link_text)).setText(</span>
+                        SessionsQuery.LINKS_TITLES[i]);
+<span class="nc" id="L608">                final int linkTitleIndex = i;</span>
+<span class="nc" id="L609">                linkContainer.setOnClickListener(new View.OnClickListener() {</span>
+                    public void onClick(View view) {
+<span class="nc" id="L611">                        fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);</span>
+<span class="nc" id="L612">                    	Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));</span>
+<span class="nc" id="L613">                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);</span>
+<span class="nc" id="L614">                        startActivity(intent);</span>
+                        
+<span class="nc" id="L616">                    }</span>
+                });
+
+<span class="nc" id="L619">                container.addView(linkContainer);</span>
+
+                // Create separator
+<span class="nc" id="L622">                View separatorView = new ImageView(getActivity());</span>
+<span class="nc" id="L623">                separatorView.setLayoutParams(</span>
+                        new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT));
+<span class="nc" id="L626">                separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);</span>
+<span class="nc" id="L627">                container.addView(separatorView);</span>
+            }
+        }
+
+<span class="pc bpc" id="L631" title="1 of 2 branches missed.">        container.findViewById(R.id.empty_links).setVisibility(hasLinks ? View.GONE : View.VISIBLE);</span>
+<span class="fc" id="L632">    }</span>
+
+    private String getHashtagsString() {
+<span class="pc bpc" id="L635" title="1 of 2 branches missed.">        if (!TextUtils.isEmpty(mHashtag)) {</span>
+<span class="nc" id="L636">            return TagStreamFragment.CONFERENCE_HASHTAG + &quot; #&quot; + mHashtag;</span>
+        } else {
+<span class="fc" id="L638">            return TagStreamFragment.CONFERENCE_HASHTAG;</span>
+        }
+    }
+
+<span class="fc" id="L642">    private BroadcastReceiver mPackageChangesReceiver = new BroadcastReceiver() {</span>
+        @Override
+        public void onReceive(Context context, Intent intent) {
+<span class="nc" id="L645">            updateNotesTab();</span>
+<span class="nc" id="L646">        }</span>
+    };
+    /**
+     * {@link com.google.android.apps.iosched.provider.ScheduleContract.Sessions} query parameters.
+     */
+    private interface SessionsQuery {
+        int _TOKEN = 0x1;
+
+<span class="fc" id="L654">        String[] PROJECTION = {</span>
+                ScheduleContract.Blocks.BLOCK_START,
+                ScheduleContract.Blocks.BLOCK_END,
+                ScheduleContract.Sessions.SESSION_LEVEL,
+                ScheduleContract.Sessions.SESSION_TITLE,
+                ScheduleContract.Sessions.SESSION_ABSTRACT,
+                ScheduleContract.Sessions.SESSION_REQUIREMENTS,
+                ScheduleContract.Sessions.SESSION_STARRED,
+                ScheduleContract.Sessions.SESSION_HASHTAG,
+                ScheduleContract.Sessions.SESSION_SLUG,
+                ScheduleContract.Sessions.SESSION_URL,
+                ScheduleContract.Sessions.SESSION_MODERATOR_URL,
+                ScheduleContract.Sessions.SESSION_YOUTUBE_URL,
+                ScheduleContract.Sessions.SESSION_PDF_URL,
+                ScheduleContract.Sessions.SESSION_FEEDBACK_URL,
+                ScheduleContract.Sessions.SESSION_NOTES_URL,
+                ScheduleContract.Sessions.ROOM_ID,
+                ScheduleContract.Rooms.ROOM_NAME,
+        };
+
+        int BLOCK_START = 0;
+        int BLOCK_END = 1;
+        int LEVEL = 2;
+        int TITLE = 3;
+        int ABSTRACT = 4;
+        int REQUIREMENTS = 5;
+        int STARRED = 6;
+        int HASHTAG = 7;
+        int SLUG = 8;
+        int URL = 9;
+        int MODERATOR_URL = 10;
+        int YOUTUBE_URL = 11;
+        int PDF_URL = 12;
+        int FEEDBACK_URL = 13;
+        int NOTES_URL = 14;
+        int ROOM_ID = 15;
+        int ROOM_NAME = 16;
+
+<span class="fc" id="L692">        int[] LINKS_INDICES = {</span>
+                URL,
+                MODERATOR_URL,
+                YOUTUBE_URL,
+                PDF_URL,
+                FEEDBACK_URL,
+                NOTES_URL,
+        };
+
+<span class="fc" id="L701">        int[] LINKS_TITLES = {</span>
+                R.string.session_link_main,
+                R.string.session_link_moderator,
+                R.string.session_link_youtube,
+                R.string.session_link_pdf,
+                R.string.session_link_feedback,
+                R.string.session_link_notes,
+        };
+    }
+
+    /**
+     * {@link com.google.android.apps.iosched.provider.ScheduleContract.Tracks} query parameters.
+     */
+    private interface TracksQuery {
+        int _TOKEN = 0x2;
+
+<span class="fc" id="L717">        String[] PROJECTION = {</span>
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_COLOR,
+        };
+
+        int TRACK_NAME = 0;
+        int TRACK_COLOR = 1;
+    }
+
+    private interface SpeakersQuery {
+        int _TOKEN = 0x3;
+
+<span class="fc" id="L729">        String[] PROJECTION = {</span>
+                ScheduleContract.Speakers.SPEAKER_NAME,
+                ScheduleContract.Speakers.SPEAKER_IMAGE_URL,
+                ScheduleContract.Speakers.SPEAKER_COMPANY,
+                ScheduleContract.Speakers.SPEAKER_ABSTRACT,
+                ScheduleContract.Speakers.SPEAKER_URL,
+        };
+
+        int SPEAKER_NAME = 0;
+        int SPEAKER_IMAGE_URL = 1;
+        int SPEAKER_COMPANY = 2;
+        int SPEAKER_ABSTRACT = 3;
+        int SPEAKER_URL = 4;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

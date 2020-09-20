@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FractionalTouchDelegate.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">FractionalTouchDelegate.java</span></div><h1>FractionalTouchDelegate.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.view.MotionEvent;
+import android.view.TouchDelegate;
+import android.view.View;
+
+/**
+ * {@link TouchDelegate} that gates {@link MotionEvent} instances by comparing
+ * then against fractional dimensions of the source view.
+ * &lt;p&gt;
+ * This is particularly useful when you want to define a rectangle in terms of
+ * the source dimensions, but when those dimensions might change due to pending
+ * or future layout passes.
+ * &lt;p&gt;
+ * One example is catching touches that occur in the top-right quadrant of
+ * {@code sourceParent}, and relaying them to {@code targetChild}. This could be
+ * done with: &lt;code&gt;
+ * FractionalTouchDelegate.setupDelegate(sourceParent, targetChild, new RectF(0.5f, 0f, 1f, 0.5f));
+ * &lt;/code&gt;
+ */
+public class FractionalTouchDelegate extends TouchDelegate {
+
+    private View mSource;
+    private View mTarget;
+
+    private RectF mSourceFraction;
+
+<span class="fc" id="L46">    private Rect mScrap = new Rect();</span>
+
+    /** Cached full dimensions of {@link #mSource}. */
+<span class="fc" id="L49">    private Rect mSourceFull = new Rect();</span>
+    /** Cached projection of {@link #mSourceFraction} onto {@link #mSource}. */
+<span class="fc" id="L51">    private Rect mSourcePartial = new Rect();</span>
+
+    private boolean mDelegateTargeted;
+
+    public FractionalTouchDelegate(View source, View target, RectF sourceFraction) {
+<span class="fc" id="L56">        super(new Rect(0, 0, 0, 0), target);</span>
+<span class="fc" id="L57">        mSource = source;</span>
+<span class="fc" id="L58">        mTarget = target;</span>
+<span class="fc" id="L59">        mSourceFraction = sourceFraction;</span>
+<span class="fc" id="L60">    }</span>
+
+    /**
+     * Helper to create and setup a {@link FractionalTouchDelegate} between the
+     * given {@link View}.
+     *
+     * @param source Larger source {@link View}, usually a parent, that will be
+     *            assigned {@link View#setTouchDelegate(TouchDelegate)}.
+     * @param target Smaller target {@link View} which will receive
+     *            {@link MotionEvent} that land in requested fractional area.
+     * @param sourceFraction Fractional area projected onto source {@link View}
+     *            which determines when {@link MotionEvent} will be passed to
+     *            target {@link View}.
+     */
+    public static void setupDelegate(View source, View target, RectF sourceFraction) {
+<span class="fc" id="L75">        source.setTouchDelegate(new FractionalTouchDelegate(source, target, sourceFraction));</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Consider updating {@link #mSourcePartial} when {@link #mSource}
+     * dimensions have changed.
+     */
+    private void updateSourcePartial() {
+<span class="nc" id="L83">        mSource.getHitRect(mScrap);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (!mScrap.equals(mSourceFull)) {</span>
+            // Copy over and calculate fractional rectangle
+<span class="nc" id="L86">            mSourceFull.set(mScrap);</span>
+
+<span class="nc" id="L88">            final int width = mSourceFull.width();</span>
+<span class="nc" id="L89">            final int height = mSourceFull.height();</span>
+
+<span class="nc" id="L91">            mSourcePartial.left = (int) (mSourceFraction.left * width);</span>
+<span class="nc" id="L92">            mSourcePartial.top = (int) (mSourceFraction.top * height);</span>
+<span class="nc" id="L93">            mSourcePartial.right = (int) (mSourceFraction.right * width);</span>
+<span class="nc" id="L94">            mSourcePartial.bottom = (int) (mSourceFraction.bottom * height);</span>
+        }
+<span class="nc" id="L96">    }</span>
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+<span class="nc" id="L100">        updateSourcePartial();</span>
+
+        // The logic below is mostly copied from the parent class, since we
+        // can't update private mBounds variable.
+
+        // http://android.git.kernel.org/?p=platform/frameworks/base.git;a=blob;
+        // f=core/java/android/view/TouchDelegate.java;hb=eclair#l98
+
+<span class="nc" id="L108">        final Rect sourcePartial = mSourcePartial;</span>
+<span class="nc" id="L109">        final View target = mTarget;</span>
+
+<span class="nc" id="L111">        int x = (int)event.getX();</span>
+<span class="nc" id="L112">        int y = (int)event.getY();</span>
+
+<span class="nc" id="L114">        boolean sendToDelegate = false;</span>
+<span class="nc" id="L115">        boolean hit = true;</span>
+<span class="nc" id="L116">        boolean handled = false;</span>
+
+<span class="nc bnc" id="L118" title="All 4 branches missed.">        switch (event.getAction()) {</span>
+        case MotionEvent.ACTION_DOWN:
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (sourcePartial.contains(x, y)) {</span>
+<span class="nc" id="L121">                mDelegateTargeted = true;</span>
+<span class="nc" id="L122">                sendToDelegate = true;</span>
+            }
+            break;
+        case MotionEvent.ACTION_UP:
+        case MotionEvent.ACTION_MOVE:
+<span class="nc" id="L127">            sendToDelegate = mDelegateTargeted;</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">            if (sendToDelegate) {</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                if (!sourcePartial.contains(x, y)) {</span>
+<span class="nc" id="L130">                    hit = false;</span>
+                }
+            }
+            break;
+        case MotionEvent.ACTION_CANCEL:
+<span class="nc" id="L135">            sendToDelegate = mDelegateTargeted;</span>
+<span class="nc" id="L136">            mDelegateTargeted = false;</span>
+            break;
+        }
+
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (sendToDelegate) {</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">            if (hit) {</span>
+<span class="nc" id="L142">                event.setLocation(target.getWidth() / 2, target.getHeight() / 2);</span>
+            } else {
+<span class="nc" id="L144">                event.setLocation(-1, -1);</span>
+            }
+<span class="nc" id="L146">            handled = target.dispatchTouchEvent(event);</span>
+        }
+<span class="nc" id="L148">        return handled;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

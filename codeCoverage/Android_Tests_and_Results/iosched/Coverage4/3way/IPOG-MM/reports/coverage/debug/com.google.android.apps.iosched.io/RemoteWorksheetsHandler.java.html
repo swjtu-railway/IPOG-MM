@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RemoteWorksheetsHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.io</a> &gt; <span class="el_source">RemoteWorksheetsHandler.java</span></div><h1>RemoteWorksheetsHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.io;
+
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.provider.ScheduleContract.Sessions;
+import com.google.android.apps.iosched.provider.ScheduleContract.Speakers;
+import com.google.android.apps.iosched.provider.ScheduleContract.Vendors;
+import com.google.android.apps.iosched.util.Lists;
+import com.google.android.apps.iosched.util.Maps;
+import com.google.android.apps.iosched.util.ParserUtils;
+import com.google.android.apps.iosched.util.WorksheetEntry;
+
+import org.apache.http.client.methods.HttpGet;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
+import android.net.Uri;
+import android.util.Log;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.ENTRY;
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+
+public class RemoteWorksheetsHandler extends XmlHandler {
+    private static final String TAG = &quot;WorksheetsHandler&quot;;
+
+    private RemoteExecutor mExecutor;
+
+    public RemoteWorksheetsHandler(RemoteExecutor executor) {
+<span class="nc" id="L51">        super(ScheduleContract.CONTENT_AUTHORITY);</span>
+<span class="nc" id="L52">        mExecutor = executor;</span>
+<span class="nc" id="L53">    }</span>
+
+    @Override
+    public ArrayList&lt;ContentProviderOperation&gt; parse(XmlPullParser parser, ContentResolver resolver)
+            throws XmlPullParserException, IOException {
+<span class="nc" id="L58">        final HashMap&lt;String, WorksheetEntry&gt; sheets = Maps.newHashMap();</span>
+
+        // walk response, collecting all known spreadsheets
+        int type;
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        while ((type = parser.next()) != END_DOCUMENT) {</span>
+<span class="nc bnc" id="L63" title="All 4 branches missed.">            if (type == START_TAG &amp;&amp; ENTRY.equals(parser.getName())) {</span>
+<span class="nc" id="L64">                final WorksheetEntry entry = WorksheetEntry.fromParser(parser);</span>
+<span class="nc" id="L65">                Log.d(TAG, &quot;found worksheet &quot; + entry.toString());</span>
+<span class="nc" id="L66">                sheets.put(entry.getTitle(), entry);</span>
+<span class="nc" id="L67">            }</span>
+        }
+
+        // consider updating each spreadsheet based on update timestamp
+<span class="nc" id="L71">        considerUpdate(sheets, Worksheets.SESSIONS, Sessions.CONTENT_URI, resolver);</span>
+<span class="nc" id="L72">        considerUpdate(sheets, Worksheets.SPEAKERS, Speakers.CONTENT_URI, resolver);</span>
+<span class="nc" id="L73">        considerUpdate(sheets, Worksheets.VENDORS, Vendors.CONTENT_URI, resolver);</span>
+
+<span class="nc" id="L75">        return Lists.newArrayList();</span>
+    }
+
+    private void considerUpdate(HashMap&lt;String, WorksheetEntry&gt; sheets, String sheetName,
+            Uri targetDir, ContentResolver resolver) throws HandlerException {
+<span class="nc" id="L80">        final WorksheetEntry entry = sheets.get(sheetName);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (entry == null) {</span>
+            // Silently ignore missing spreadsheets to allow sync to continue.
+<span class="nc" id="L83">            Log.w(TAG, &quot;Missing '&quot; + sheetName + &quot;' worksheet data&quot;);</span>
+<span class="nc" id="L84">            return;</span>
+//            throw new HandlerException(&quot;Missing '&quot; + sheetName + &quot;' worksheet data&quot;);
+        }
+
+<span class="nc" id="L88">        final long localUpdated = ParserUtils.queryDirUpdated(targetDir, resolver);</span>
+<span class="nc" id="L89">        final long serverUpdated = entry.getUpdated();</span>
+<span class="nc" id="L90">        Log.d(TAG, &quot;considerUpdate() for &quot; + entry.getTitle() + &quot; found localUpdated=&quot;</span>
+                + localUpdated + &quot;, server=&quot; + serverUpdated);
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        if (localUpdated &gt;= serverUpdated) return;</span>
+
+<span class="nc" id="L94">        final HttpGet request = new HttpGet(entry.getListFeed());</span>
+<span class="nc" id="L95">        final XmlHandler handler = createRemoteHandler(entry);</span>
+<span class="nc" id="L96">        mExecutor.execute(request, handler);</span>
+<span class="nc" id="L97">    }</span>
+
+    private XmlHandler createRemoteHandler(WorksheetEntry entry) {
+<span class="nc" id="L100">        final String title = entry.getTitle();</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (Worksheets.SESSIONS.equals(title)) {</span>
+<span class="nc" id="L102">            return new RemoteSessionsHandler();</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        } else if (Worksheets.SPEAKERS.equals(title)) {</span>
+<span class="nc" id="L104">            return new RemoteSpeakersHandler();</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        } else if (Worksheets.VENDORS.equals(title)) {</span>
+<span class="nc" id="L106">            return new RemoteVendorsHandler();</span>
+        } else {
+<span class="nc" id="L108">            throw new IllegalArgumentException(&quot;Unknown worksheet type&quot;);</span>
+        }
+    }
+
+    interface Worksheets {
+        String SESSIONS = &quot;sessions&quot;;
+        String SPEAKERS = &quot;speakers&quot;;
+        String VENDORS = &quot;sandbox&quot;;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScheduleContract.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.provider</a> &gt; <span class="el_source">ScheduleContract.java</span></div><h1>ScheduleContract.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.provider;
+
+import com.google.android.apps.iosched.util.ParserUtils;
+
+import android.app.SearchManager;
+import android.graphics.Color;
+import android.net.Uri;
+import android.provider.BaseColumns;
+import android.text.format.DateUtils;
+
+import java.util.List;
+
+/**
+ * Contract class for interacting with {@link ScheduleProvider}. Unless
+ * otherwise noted, all time-based fields are milliseconds since epoch and can
+ * be compared against {@link System#currentTimeMillis()}.
+ * &lt;p&gt;
+ * The backing {@link android.content.ContentProvider} assumes that {@link Uri} are generated
+ * using stronger {@link String} identifiers, instead of {@code int}
+ * {@link BaseColumns#_ID} values, which are prone to shuffle during sync.
+ */
+public class ScheduleContract {
+
+    /**
+     * Special value for {@link SyncColumns#UPDATED} indicating that an entry
+     * has never been updated, or doesn't exist yet.
+     */
+    public static final long UPDATED_NEVER = -2;
+
+    /**
+     * Special value for {@link SyncColumns#UPDATED} indicating that the last
+     * update time is unknown, usually when inserted from a local file source.
+     */
+    public static final long UPDATED_UNKNOWN = -1;
+
+    public interface SyncColumns {
+        /** Last time this entry was updated or synchronized. */
+        String UPDATED = &quot;updated&quot;;
+    }
+
+    interface BlocksColumns {
+        /** Unique string identifying this block of time. */
+        String BLOCK_ID = &quot;block_id&quot;;
+        /** Title describing this block of time. */
+        String BLOCK_TITLE = &quot;block_title&quot;;
+        /** Time when this block starts. */
+        String BLOCK_START = &quot;block_start&quot;;
+        /** Time when this block ends. */
+        String BLOCK_END = &quot;block_end&quot;;
+        /** Type describing this block. */
+        String BLOCK_TYPE = &quot;block_type&quot;;
+    }
+
+    interface TracksColumns {
+        /** Unique string identifying this track. */
+        String TRACK_ID = &quot;track_id&quot;;
+        /** Name describing this track. */
+        String TRACK_NAME = &quot;track_name&quot;;
+        /** Color used to identify this track, in {@link Color#argb} format. */
+        String TRACK_COLOR = &quot;track_color&quot;;
+        /** Body of text explaining this track in detail. */
+        String TRACK_ABSTRACT = &quot;track_abstract&quot;;
+    }
+
+    interface RoomsColumns {
+        /** Unique string identifying this room. */
+        String ROOM_ID = &quot;room_id&quot;;
+        /** Name describing this room. */
+        String ROOM_NAME = &quot;room_name&quot;;
+        /** Building floor this room exists on. */
+        String ROOM_FLOOR = &quot;room_floor&quot;;
+    }
+
+    interface SessionsColumns {
+        /** Unique string identifying this session. */
+        String SESSION_ID = &quot;session_id&quot;;
+        /** Difficulty level of the session. */
+        String SESSION_LEVEL = &quot;session_level&quot;;
+        /** Title describing this track. */
+        String SESSION_TITLE = &quot;session_title&quot;;
+        /** Body of text explaining this session in detail. */
+        String SESSION_ABSTRACT = &quot;session_abstract&quot;;
+        /** Requirements that attendees should meet. */
+        String SESSION_REQUIREMENTS = &quot;session_requirements&quot;;
+        /** Kewords/tags for this session. */
+        String SESSION_KEYWORDS = &quot;session_keywords&quot;;
+        /** Hashtag for this session. */
+        String SESSION_HASHTAG = &quot;session_hashtag&quot;;
+        /** Slug (short name) for this session. */
+        String SESSION_SLUG = &quot;session_slug&quot;;
+        /** Full URL to session online. */
+        String SESSION_URL = &quot;session_url&quot;;
+        /** Link to Moderator for this session. */
+        String SESSION_MODERATOR_URL = &quot;session_moderator_url&quot;;
+        /** Full URL to YouTube. */
+        String SESSION_YOUTUBE_URL = &quot;session_youtube_url&quot;;
+        /** Full URL to PDF. */
+        String SESSION_PDF_URL = &quot;session_pdf_url&quot;;
+        /** Full URL to speakermeter/external feedback URL. */
+        String SESSION_FEEDBACK_URL = &quot;session_feedback_url&quot;;
+        /** Full URL to official session notes. */
+        String SESSION_NOTES_URL = &quot;session_notes_url&quot;;
+        /** User-specific flag indicating starred status. */
+        String SESSION_STARRED = &quot;session_starred&quot;;
+    }
+
+    interface SpeakersColumns {
+        /** Unique string identifying this speaker. */
+        String SPEAKER_ID = &quot;speaker_id&quot;;
+        /** Name of this speaker. */
+        String SPEAKER_NAME = &quot;speaker_name&quot;;
+        /** Profile photo of this speaker. */
+        String SPEAKER_IMAGE_URL = &quot;speaker_image_url&quot;;
+        /** Company this speaker works for. */
+        String SPEAKER_COMPANY = &quot;speaker_company&quot;;
+        /** Body of text describing this speaker in detail. */
+        String SPEAKER_ABSTRACT = &quot;speaker_abstract&quot;;
+        /** Full URL to the speaker's profile. */
+        String SPEAKER_URL = &quot;speaker_url&quot;;
+    }
+
+    interface VendorsColumns {
+        /** Unique string identifying this vendor. */
+        String VENDOR_ID = &quot;vendor_id&quot;;
+        /** Name of this vendor. */
+        String VENDOR_NAME = &quot;vendor_name&quot;;
+        /** Location or city this vendor is based in. */
+        String VENDOR_LOCATION = &quot;vendor_location&quot;;
+        /** Body of text describing this vendor. */
+        String VENDOR_DESC = &quot;vendor_desc&quot;;
+        /** Link to vendor online. */
+        String VENDOR_URL = &quot;vendor_url&quot;;
+        /** Body of text describing the product of this vendor. */
+        String VENDOR_PRODUCT_DESC = &quot;vendor_product_desc&quot;;
+        /** Link to vendor logo. */
+        String VENDOR_LOGO_URL = &quot;vendor_logo_url&quot;;
+        /** User-specific flag indicating starred status. */
+        String VENDOR_STARRED = &quot;vendor_starred&quot;;
+    }
+
+    public static final String CONTENT_AUTHORITY = &quot;com.google.android.apps.iosched&quot;;
+
+<span class="fc" id="L159">    private static final Uri BASE_CONTENT_URI = Uri.parse(&quot;content://&quot; + CONTENT_AUTHORITY);</span>
+
+    private static final String PATH_BLOCKS = &quot;blocks&quot;;
+    private static final String PATH_AT = &quot;at&quot;;
+    private static final String PATH_BETWEEN = &quot;between&quot;;
+    private static final String PATH_TRACKS = &quot;tracks&quot;;
+    private static final String PATH_ROOMS = &quot;rooms&quot;;
+    private static final String PATH_SESSIONS = &quot;sessions&quot;;
+    private static final String PATH_STARRED = &quot;starred&quot;;
+    private static final String PATH_SPEAKERS = &quot;speakers&quot;;
+    private static final String PATH_VENDORS = &quot;vendors&quot;;
+    private static final String PATH_EXPORT = &quot;export&quot;;
+    private static final String PATH_SEARCH = &quot;search&quot;;
+    private static final String PATH_SEARCH_SUGGEST = &quot;search_suggest_query&quot;;
+
+    /**
+     * Blocks are generic timeslots that {@link Sessions} and other related
+     * events fall into.
+     */
+<span class="nc" id="L178">    public static class Blocks implements BlocksColumns, BaseColumns {</span>
+<span class="fc" id="L179">        public static final Uri CONTENT_URI =</span>
+<span class="fc" id="L180">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_BLOCKS).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.block&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.block&quot;;
+
+        /** Count of {@link Sessions} inside given block. */
+        public static final String SESSIONS_COUNT = &quot;sessions_count&quot;;
+
+        /**
+         * Flag indicating that at least one {@link Sessions#SESSION_ID} inside
+         * this block has {@link Sessions#SESSION_STARRED} set.
+         */
+        public static final String CONTAINS_STARRED = &quot;contains_starred&quot;;
+
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = BlocksColumns.BLOCK_START + &quot; ASC, &quot;
+                + BlocksColumns.BLOCK_END + &quot; ASC&quot;;
+
+        /** Build {@link Uri} for requested {@link #BLOCK_ID}. */
+        public static Uri buildBlockUri(String blockId) {
+<span class="fc" id="L202">            return CONTENT_URI.buildUpon().appendPath(blockId).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Sessions} associated
+         * with the requested {@link #BLOCK_ID}.
+         */
+        public static Uri buildSessionsUri(String blockId) {
+<span class="fc" id="L210">            return CONTENT_URI.buildUpon().appendPath(blockId).appendPath(PATH_SESSIONS).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Blocks} that occur
+         * between the requested time boundaries.
+         */
+        public static Uri buildBlocksBetweenDirUri(long startTime, long endTime) {
+<span class="fc" id="L218">            return CONTENT_URI.buildUpon().appendPath(PATH_BETWEEN).appendPath(</span>
+<span class="fc" id="L219">                    String.valueOf(startTime)).appendPath(String.valueOf(endTime)).build();</span>
+        }
+
+        /** Read {@link #BLOCK_ID} from {@link Blocks} {@link Uri}. */
+        public static String getBlockId(Uri uri) {
+<span class="fc" id="L224">            return uri.getPathSegments().get(1);</span>
+        }
+
+        /**
+         * Generate a {@link #BLOCK_ID} that will always match the requested
+         * {@link Blocks} details.
+         */
+        public static String generateBlockId(long startTime, long endTime) {
+<span class="fc" id="L232">            startTime /= DateUtils.SECOND_IN_MILLIS;</span>
+<span class="fc" id="L233">            endTime /= DateUtils.SECOND_IN_MILLIS;</span>
+<span class="fc" id="L234">            return ParserUtils.sanitizeId(startTime + &quot;-&quot; + endTime);</span>
+        }
+    }
+
+    /**
+     * Tracks are overall categories for {@link Sessions} and {@link Vendors},
+     * such as &quot;Android&quot; or &quot;Enterprise.&quot;
+     */
+<span class="nc" id="L242">    public static class Tracks implements TracksColumns, BaseColumns {</span>
+<span class="fc" id="L243">        public static final Uri CONTENT_URI =</span>
+<span class="fc" id="L244">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_TRACKS).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.track&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.track&quot;;
+
+        /** Count of {@link Sessions} inside given track. */
+        public static final String SESSIONS_COUNT = &quot;sessions_count&quot;;
+        /** Count of {@link Vendors} inside given track. */
+        public static final String VENDORS_COUNT = &quot;vendors_count&quot;;
+
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = TracksColumns.TRACK_NAME + &quot; ASC&quot;;
+
+        /** &quot;All tracks&quot; ID. */
+        public static final String ALL_TRACK_ID = &quot;all&quot;;
+
+        /** Build {@link Uri} for requested {@link #TRACK_ID}. */
+        public static Uri buildTrackUri(String trackId) {
+<span class="fc" id="L264">            return CONTENT_URI.buildUpon().appendPath(trackId).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Sessions} associated
+         * with the requested {@link #TRACK_ID}.
+         */
+        public static Uri buildSessionsUri(String trackId) {
+<span class="fc" id="L272">            return CONTENT_URI.buildUpon().appendPath(trackId).appendPath(PATH_SESSIONS).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Vendors} associated with
+         * the requested {@link #TRACK_ID}.
+         */
+        public static Uri buildVendorsUri(String trackId) {
+<span class="nc" id="L280">            return CONTENT_URI.buildUpon().appendPath(trackId).appendPath(PATH_VENDORS).build();</span>
+        }
+
+        /** Read {@link #TRACK_ID} from {@link Tracks} {@link Uri}. */
+        public static String getTrackId(Uri uri) {
+<span class="fc" id="L285">            return uri.getPathSegments().get(1);</span>
+        }
+
+        /**
+         * Generate a {@link #TRACK_ID} that will always match the requested
+         * {@link Tracks} details.
+         */
+        public static String generateTrackId(String title) {
+<span class="fc" id="L293">            return ParserUtils.sanitizeId(title);</span>
+        }
+    }
+
+    /**
+     * Rooms are physical locations at the conference venue.
+     */
+<span class="nc" id="L300">    public static class Rooms implements RoomsColumns, BaseColumns {</span>
+<span class="fc" id="L301">        public static final Uri CONTENT_URI =</span>
+<span class="fc" id="L302">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_ROOMS).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.room&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.room&quot;;
+
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = RoomsColumns.ROOM_FLOOR + &quot; ASC, &quot;
+                + RoomsColumns.ROOM_NAME + &quot; COLLATE NOCASE ASC&quot;;
+
+        /** Build {@link Uri} for requested {@link #ROOM_ID}. */
+        public static Uri buildRoomUri(String roomId) {
+<span class="fc" id="L315">            return CONTENT_URI.buildUpon().appendPath(roomId).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Sessions} associated
+         * with the requested {@link #ROOM_ID}.
+         */
+        public static Uri buildSessionsDirUri(String roomId) {
+<span class="nc" id="L323">            return CONTENT_URI.buildUpon().appendPath(roomId).appendPath(PATH_SESSIONS).build();</span>
+        }
+
+        /** Read {@link #ROOM_ID} from {@link Rooms} {@link Uri}. */
+        public static String getRoomId(Uri uri) {
+<span class="nc" id="L328">            return uri.getPathSegments().get(1);</span>
+        }
+
+        /**
+         * Generate a {@link #ROOM_ID} that will always match the requested
+         * {@link Rooms} details.
+         */
+        public static String generateRoomId(String room) {
+<span class="fc" id="L336">            return ParserUtils.sanitizeId(room);</span>
+        }
+    }
+
+    /**
+     * Each session is a block of time that has a {@link Tracks}, a
+     * {@link Rooms}, and zero or more {@link Speakers}.
+     */
+<span class="nc" id="L344">    public static class Sessions implements SessionsColumns, BlocksColumns, RoomsColumns,</span>
+            SyncColumns, BaseColumns {
+        public static final Uri CONTENT_URI =
+<span class="fc" id="L347">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_SESSIONS).build();</span>
+<span class="fc" id="L348">        public static final Uri CONTENT_STARRED_URI =</span>
+<span class="fc" id="L349">                CONTENT_URI.buildUpon().appendPath(PATH_STARRED).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.session&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.session&quot;;
+
+        public static final String BLOCK_ID = &quot;block_id&quot;;
+        public static final String ROOM_ID = &quot;room_id&quot;;
+
+        public static final String SEARCH_SNIPPET = &quot;search_snippet&quot;;
+
+        // TODO: shortcut primary track to offer sub-sorting here
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = BlocksColumns.BLOCK_START + &quot; ASC,&quot;
+                + SessionsColumns.SESSION_TITLE + &quot; COLLATE NOCASE ASC&quot;;
+
+        /** Build {@link Uri} for requested {@link #SESSION_ID}. */
+        public static Uri buildSessionUri(String sessionId) {
+<span class="fc" id="L368">            return CONTENT_URI.buildUpon().appendPath(sessionId).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Speakers} associated
+         * with the requested {@link #SESSION_ID}.
+         */
+        public static Uri buildSpeakersDirUri(String sessionId) {
+<span class="fc" id="L376">            return CONTENT_URI.buildUpon().appendPath(sessionId).appendPath(PATH_SPEAKERS).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Tracks} associated with
+         * the requested {@link #SESSION_ID}.
+         */
+        public static Uri buildTracksDirUri(String sessionId) {
+<span class="fc" id="L384">            return CONTENT_URI.buildUpon().appendPath(sessionId).appendPath(PATH_TRACKS).build();</span>
+        }
+
+        public static Uri buildSessionsAtDirUri(long time) {
+<span class="nc" id="L388">            return CONTENT_URI.buildUpon().appendPath(PATH_AT).appendPath(String.valueOf(time))</span>
+<span class="nc" id="L389">                    .build();</span>
+        }
+
+        public static Uri buildSearchUri(String query) {
+<span class="nc" id="L393">            return CONTENT_URI.buildUpon().appendPath(PATH_SEARCH).appendPath(query).build();</span>
+        }
+
+        public static boolean isSearchUri(Uri uri) {
+<span class="fc" id="L397">            List&lt;String&gt; pathSegments = uri.getPathSegments();</span>
+<span class="pc bpc" id="L398" title="1 of 4 branches missed.">            return pathSegments.size() &gt;= 2 &amp;&amp; PATH_SEARCH.equals(pathSegments.get(1));</span>
+        }
+
+        /** Read {@link #SESSION_ID} from {@link Sessions} {@link Uri}. */
+        public static String getSessionId(Uri uri) {
+<span class="fc" id="L403">            return uri.getPathSegments().get(1);</span>
+        }
+
+        public static String getSearchQuery(Uri uri) {
+<span class="nc" id="L407">            return uri.getPathSegments().get(2);</span>
+        }
+
+        /**
+         * Generate a {@link #SESSION_ID} that will always match the requested
+         * {@link Sessions} details.
+         */
+        public static String generateSessionId(String title) {
+<span class="fc" id="L415">            return ParserUtils.sanitizeId(title);</span>
+        }
+    }
+
+    /**
+     * Speakers are individual people that lead {@link Sessions}.
+     */
+<span class="nc" id="L422">    public static class Speakers implements SpeakersColumns, SyncColumns, BaseColumns {</span>
+<span class="nc" id="L423">        public static final Uri CONTENT_URI =</span>
+<span class="nc" id="L424">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_SPEAKERS).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.speaker&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.speaker&quot;;
+
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = SpeakersColumns.SPEAKER_NAME
+                + &quot; COLLATE NOCASE ASC&quot;;
+
+        /** Build {@link Uri} for requested {@link #SPEAKER_ID}. */
+        public static Uri buildSpeakerUri(String speakerId) {
+<span class="nc" id="L437">            return CONTENT_URI.buildUpon().appendPath(speakerId).build();</span>
+        }
+
+        /**
+         * Build {@link Uri} that references any {@link Sessions} associated
+         * with the requested {@link #SPEAKER_ID}.
+         */
+        public static Uri buildSessionsDirUri(String speakerId) {
+<span class="nc" id="L445">            return CONTENT_URI.buildUpon().appendPath(speakerId).appendPath(PATH_SESSIONS).build();</span>
+        }
+
+        /** Read {@link #SPEAKER_ID} from {@link Speakers} {@link Uri}. */
+        public static String getSpeakerId(Uri uri) {
+<span class="nc" id="L450">            return uri.getPathSegments().get(1);</span>
+        }
+
+        /**
+         * Generate a {@link #SPEAKER_ID} that will always match the requested
+         * {@link Speakers} details.
+         */
+        public static String generateSpeakerId(String speakerLdap) {
+<span class="nc" id="L458">            return ParserUtils.sanitizeId(speakerLdap);</span>
+        }
+    }
+
+    /**
+     * Each vendor is a company appearing at the conference that may be
+     * associated with a specific {@link Tracks}.
+     */
+<span class="nc" id="L466">    public static class Vendors implements VendorsColumns, SyncColumns, BaseColumns {</span>
+        public static final Uri CONTENT_URI =
+<span class="fc" id="L468">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_VENDORS).build();</span>
+<span class="fc" id="L469">        public static final Uri CONTENT_STARRED_URI =</span>
+<span class="fc" id="L470">                CONTENT_URI.buildUpon().appendPath(PATH_STARRED).build();</span>
+
+        public static final String CONTENT_TYPE =
+                &quot;vnd.android.cursor.dir/vnd.iosched.vendor&quot;;
+        public static final String CONTENT_ITEM_TYPE =
+                &quot;vnd.android.cursor.item/vnd.iosched.vendor&quot;;
+
+        /** {@link Tracks#TRACK_ID} that this vendor belongs to. */
+        public static final String TRACK_ID = &quot;track_id&quot;;
+
+        public static final String SEARCH_SNIPPET = &quot;search_snippet&quot;;
+
+        /** Default &quot;ORDER BY&quot; clause. */
+        public static final String DEFAULT_SORT = VendorsColumns.VENDOR_NAME
+                + &quot; COLLATE NOCASE ASC&quot;;
+
+        /** Build {@link Uri} for requested {@link #VENDOR_ID}. */
+        public static Uri buildVendorUri(String vendorId) {
+<span class="nc" id="L488">            return CONTENT_URI.buildUpon().appendPath(vendorId).build();</span>
+        }
+
+        public static Uri buildSearchUri(String query) {
+<span class="nc" id="L492">            return CONTENT_URI.buildUpon().appendPath(PATH_SEARCH).appendPath(query).build();</span>
+        }
+
+        public static boolean isSearchUri(Uri uri) {
+<span class="fc" id="L496">            List&lt;String&gt; pathSegments = uri.getPathSegments();</span>
+<span class="pc bpc" id="L497" title="2 of 4 branches missed.">            return pathSegments.size() &gt;= 2 &amp;&amp; PATH_SEARCH.equals(pathSegments.get(1));</span>
+        }
+
+        /** Read {@link #VENDOR_ID} from {@link Vendors} {@link Uri}. */
+        public static String getVendorId(Uri uri) {
+<span class="nc" id="L502">            return uri.getPathSegments().get(1);</span>
+        }
+
+        public static String getSearchQuery(Uri uri) {
+<span class="nc" id="L506">            return uri.getPathSegments().get(2);</span>
+        }
+
+        /**
+         * Generate a {@link #VENDOR_ID} that will always match the requested
+         * {@link Vendors} details.
+         */
+        public static String generateVendorId(String companyLogo) {
+<span class="nc" id="L514">            return ParserUtils.sanitizeId(companyLogo);</span>
+        }
+    }
+
+<span class="nc" id="L518">    public static class SearchSuggest {</span>
+<span class="fc" id="L519">        public static final Uri CONTENT_URI =</span>
+<span class="fc" id="L520">                BASE_CONTENT_URI.buildUpon().appendPath(PATH_SEARCH_SUGGEST).build();</span>
+
+        public static final String DEFAULT_SORT = SearchManager.SUGGEST_COLUMN_TEXT_1
+                + &quot; COLLATE NOCASE ASC&quot;;
+    }
+
+<span class="nc" id="L526">    private ScheduleContract() {</span>
+<span class="nc" id="L527">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

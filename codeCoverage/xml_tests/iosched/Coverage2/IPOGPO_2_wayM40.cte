@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CteObject id="c1"> 
+  <Tree root="c3" id="c2" name="p40_tree"> 
+    <Composition id="c3" name="p40" x="0" y="0"> 
+      <Composition id="c4" name="p40_sequence" x="0" y="0"> 
+        <Composition id="c5" name="DASHBOARD_click_Sessions_btn" x="0" y="0"/>  
+        <Composition id="c6" name="SESSIONS_select_Sessions_list" x="0" y="0"> 
+          <Classification x="0" y="0" id="c7" name="session_list"> 
+            <Class id="c8" name="0" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c9"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c10" name="1" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c11"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c12" name="2" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c13"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c14" name="3" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c15"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class> 
+          </Classification> 
+        </Composition>  
+        <Composition id="c16" name="SESSIONSDETAILS_select_Talk_list" x="0" y="0"> 
+          <Classification x="0" y="0" id="c17" name="session_list"> 
+            <Class id="c18" name="0" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c19"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c20" name="1" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c21"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c22" name="2" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c23"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class>  
+            <Class id="c24" name="3" x="0" y="0"> 
+              <Tag type="PriorityGen" id="c25"> 
+                <Content key="error" value="-1.0"/>  
+                <Content key="occurrence" value="0.25"/>  
+                <Content key="cost" value="-1.0"/> 
+              </Tag> 
+            </Class> 
+          </Classification> 
+        </Composition>  
+        <Composition id="c26" name="TALKDETAILS_click_Map_menu_btn" x="0" y="0"/> 
+      </Composition> 
+    </Composition> 
+  </Tree>  
+  <TestGroup id="c27" name="TG"> 
+    <TestGroup id="c28" name="PW-McDowell"> 
+      <TestCase id="c29" name="tc0">
+        <Marks true="c24 c8 "/>
+      </TestCase>
+      <TestCase id="c30" name="tc1">
+        <Marks true="c24 c10 "/>
+      </TestCase>
+      <TestCase id="c31" name="tc2">
+        <Marks true="c24 c12 "/>
+      </TestCase>
+      <TestCase id="c32" name="tc3">
+        <Marks true="c18 c14 "/>
+      </TestCase>
+      <TestCase id="c33" name="tc4">
+        <Marks true="c20 c14 "/>
+      </TestCase>
+      <TestCase id="c34" name="tc5">
+        <Marks true="c22 c14 "/>
+      </TestCase>
+    </TestGroup> 
+  </TestGroup> 
+</CteObject>

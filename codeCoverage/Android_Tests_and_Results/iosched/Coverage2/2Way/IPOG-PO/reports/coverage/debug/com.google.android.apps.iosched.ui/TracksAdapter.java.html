@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TracksAdapter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">TracksAdapter.java</span></div><h1>TracksAdapter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+
+import android.app.Activity;
+import android.content.Context;
+import android.database.Cursor;
+import android.graphics.drawable.ColorDrawable;
+import android.provider.BaseColumns;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CursorAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+/**
+ * A {@link android.widget.CursorAdapter} that renders a {@link TracksQuery}.
+ */
+public class TracksAdapter extends CursorAdapter {
+    private static final int ALL_ITEM_ID = Integer.MAX_VALUE;
+
+    private Activity mActivity;
+    private boolean mHasAllItem;
+    private int mPositionDisplacement;
+<span class="fc" id="L42">    private boolean mIsSessions = true;</span>
+
+    public TracksAdapter(Activity activity) {
+<span class="fc" id="L45">        super(activity, null);</span>
+<span class="fc" id="L46">        mActivity = activity;</span>
+<span class="fc" id="L47">    }</span>
+
+    public void setHasAllItem(boolean hasAllItem) {
+<span class="fc" id="L50">        mHasAllItem = hasAllItem;</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        mPositionDisplacement = mHasAllItem ? 1 : 0;</span>
+<span class="fc" id="L52">    }</span>
+
+    public void setIsSessions(boolean isSessions) {
+<span class="fc" id="L55">        mIsSessions = isSessions;</span>
+<span class="fc" id="L56">    }</span>
+
+    @Override
+    public int getCount() {
+<span class="fc" id="L60">        return super.getCount() + mPositionDisplacement;</span>
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+<span class="pc bpc" id="L65" title="1 of 4 branches missed.">        if (mHasAllItem &amp;&amp; position == 0) {</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            if (convertView == null) {</span>
+<span class="fc" id="L67">                convertView = mActivity.getLayoutInflater().inflate(</span>
+                        R.layout.list_item_track, parent, false);
+            }
+
+            // Custom binding for the first item
+<span class="fc" id="L72">            ((TextView) convertView.findViewById(android.R.id.text1)).setText(</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">                    &quot;(&quot; + mActivity.getResources().getString(mIsSessions</span>
+                            ? R.string.all_sessions_title
+                            : R.string.all_sandbox_title)
+                            + &quot;)&quot;);
+<span class="fc" id="L77">            convertView.findViewById(android.R.id.icon1).setVisibility(View.INVISIBLE);</span>
+
+<span class="fc" id="L79">            return convertView;</span>
+        }
+<span class="fc" id="L81">        return super.getView(position - mPositionDisplacement, convertView, parent);</span>
+    }
+
+    @Override
+    public Object getItem(int position) {
+<span class="pc bpc" id="L86" title="1 of 4 branches missed.">        if (mHasAllItem &amp;&amp; position == 0) {</span>
+<span class="fc" id="L87">            return null;</span>
+        }
+<span class="fc" id="L89">        return super.getItem(position - mPositionDisplacement);</span>
+    }
+
+    @Override
+    public long getItemId(int position) {
+<span class="pc bpc" id="L94" title="1 of 4 branches missed.">        if (mHasAllItem &amp;&amp; position == 0) {</span>
+<span class="fc" id="L95">            return ALL_ITEM_ID;</span>
+        }
+<span class="fc" id="L97">        return super.getItemId(position - mPositionDisplacement);</span>
+    }
+
+    @Override
+    public boolean isEnabled(int position) {
+<span class="pc bpc" id="L102" title="1 of 4 branches missed.">        if (mHasAllItem &amp;&amp; position == 0) {</span>
+<span class="fc" id="L103">            return true;</span>
+        }
+<span class="fc" id="L105">        return super.isEnabled(position - mPositionDisplacement);</span>
+    }
+
+    @Override
+    public int getViewTypeCount() {
+        // Add an item type for the &quot;All&quot; view.
+<span class="fc" id="L111">        return super.getViewTypeCount() + 1;</span>
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+<span class="pc bpc" id="L116" title="1 of 4 branches missed.">        if (mHasAllItem &amp;&amp; position == 0) {</span>
+<span class="fc" id="L117">            return getViewTypeCount() - 1;</span>
+        }
+<span class="fc" id="L119">        return super.getItemViewType(position - mPositionDisplacement);</span>
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public View newView(Context context, Cursor cursor, ViewGroup parent) {
+<span class="fc" id="L125">        return mActivity.getLayoutInflater().inflate(R.layout.list_item_track, parent,</span>
+                false);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void bindView(View view, Context context, Cursor cursor) {
+<span class="fc" id="L132">        final TextView textView = (TextView) view.findViewById(android.R.id.text1);</span>
+<span class="fc" id="L133">        textView.setText(cursor.getString(TracksQuery.TRACK_NAME));</span>
+
+        // Assign track color to visible block
+<span class="fc" id="L136">        final ImageView iconView = (ImageView) view.findViewById(android.R.id.icon1);</span>
+<span class="fc" id="L137">        iconView.setImageDrawable(new ColorDrawable(cursor.getInt(TracksQuery.TRACK_COLOR)));</span>
+<span class="fc" id="L138">    }</span>
+
+    /** {@link com.google.android.apps.iosched.provider.ScheduleContract.Tracks} query parameters. */
+    public interface TracksQuery {
+        int _TOKEN = 0x1;
+
+<span class="fc" id="L144">        String[] PROJECTION = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Tracks.TRACK_ID,
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_ABSTRACT,
+                ScheduleContract.Tracks.TRACK_COLOR,
+        };
+
+<span class="fc" id="L152">        String[] PROJECTION_WITH_SESSIONS_COUNT = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Tracks.TRACK_ID,
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_ABSTRACT,
+                ScheduleContract.Tracks.TRACK_COLOR,
+                ScheduleContract.Tracks.SESSIONS_COUNT,
+        };
+
+<span class="fc" id="L161">        String[] PROJECTION_WITH_VENDORS_COUNT = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Tracks.TRACK_ID,
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_ABSTRACT,
+                ScheduleContract.Tracks.TRACK_COLOR,
+                ScheduleContract.Tracks.VENDORS_COUNT,
+        };
+
+        int _ID = 0;
+        int TRACK_ID = 1;
+        int TRACK_NAME = 2;
+        int TRACK_ABSTRACT = 3;
+        int TRACK_COLOR = 4;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

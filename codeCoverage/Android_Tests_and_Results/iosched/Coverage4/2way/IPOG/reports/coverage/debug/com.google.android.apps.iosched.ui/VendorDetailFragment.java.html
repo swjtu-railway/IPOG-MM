@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VendorDetailFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">VendorDetailFragment.java</span></div><h1>VendorDetailFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.util.ActivityHelper;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.BitmapUtils;
+import com.google.android.apps.iosched.util.FractionalTouchDelegate;
+import com.google.android.apps.iosched.util.NotifyingAsyncQueryHandler;
+import com.google.android.apps.iosched.util.ParserUtils;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.ContentValues;
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.RectF;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+/**
+ * A fragment that shows detail information for a sandbox company, including company name,
+ * description, product description, logo, etc.
+ */
+<span class="nc" id="L52">public class VendorDetailFragment extends Fragment implements</span>
+        NotifyingAsyncQueryHandler.AsyncQueryListener,
+        CompoundButton.OnCheckedChangeListener {
+    private static final String TAG = &quot;VendorDetailFragment&quot;;
+
+    private Uri mVendorUri;
+
+    private String mTrackId;
+
+    private ViewGroup mRootView;
+    private TextView mName;
+    private CompoundButton mStarred;
+
+    private ImageView mLogo;
+    private TextView mUrl;
+    private TextView mDesc;
+    private TextView mProductDesc;
+    
+    private String mNameString;
+
+    private NotifyingAsyncQueryHandler mHandler;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L76">        super.onCreate(savedInstanceState);</span>
+
+<span class="nc" id="L78">        final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());</span>
+<span class="nc" id="L79">        mVendorUri = intent.getData();</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (mVendorUri== null) {</span>
+<span class="nc" id="L81">            return;</span>
+        }
+
+<span class="nc" id="L84">        setHasOptionsMenu(true);</span>
+<span class="nc" id="L85">    }</span>
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+<span class="nc" id="L89">        super.onActivityCreated(savedInstanceState);</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (mVendorUri == null) {</span>
+<span class="nc" id="L92">            return;</span>
+        }
+
+        // Start background query to load vendor details
+<span class="nc" id="L96">        mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);</span>
+<span class="nc" id="L97">        mHandler.startQuery(mVendorUri, VendorsQuery.PROJECTION);</span>
+<span class="nc" id="L98">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+
+<span class="nc" id="L104">        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_vendor_detail, null);</span>
+
+<span class="nc" id="L106">        mName = (TextView) mRootView.findViewById(R.id.vendor_name);</span>
+<span class="nc" id="L107">        mStarred = (CompoundButton) mRootView.findViewById(R.id.star_button);</span>
+
+<span class="nc" id="L109">        mStarred.setFocusable(true);</span>
+<span class="nc" id="L110">        mStarred.setClickable(true);</span>
+
+        // Larger target triggers star toggle
+<span class="nc" id="L113">        final View starParent = mRootView.findViewById(R.id.header_vendor);</span>
+<span class="nc" id="L114">        FractionalTouchDelegate.setupDelegate(starParent, mStarred, new RectF(0.6f, 0f, 1f, 0.8f));</span>
+
+<span class="nc" id="L116">        mLogo = (ImageView) mRootView.findViewById(R.id.vendor_logo);</span>
+<span class="nc" id="L117">        mUrl = (TextView) mRootView.findViewById(R.id.vendor_url);</span>
+<span class="nc" id="L118">        mDesc = (TextView) mRootView.findViewById(R.id.vendor_desc);</span>
+<span class="nc" id="L119">        mProductDesc = (TextView) mRootView.findViewById(R.id.vendor_product_desc);</span>
+
+<span class="nc" id="L121">        return mRootView;</span>
+    }
+
+    /**
+     * Build a {@link android.view.View} to be used as a tab indicator, setting the requested string resource as
+     * its label.
+     *
+     * @return View
+     */
+    private View buildIndicator(int textRes) {
+<span class="nc" id="L131">        final TextView indicator = (TextView) getActivity().getLayoutInflater()</span>
+<span class="nc" id="L132">                .inflate(R.layout.tab_indicator,</span>
+<span class="nc" id="L133">                        (ViewGroup) mRootView.findViewById(android.R.id.tabs), false);</span>
+<span class="nc" id="L134">        indicator.setText(textRes);</span>
+<span class="nc" id="L135">        return indicator;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (getActivity() == null) {</span>
+<span class="nc" id="L143">            return;</span>
+        }
+
+        try {
+<span class="nc bnc" id="L147" title="All 2 branches missed.">            if (!cursor.moveToFirst()) {</span>
+<span class="nc" id="L148">                return;</span>
+            }
+
+<span class="nc" id="L151">            mNameString = cursor.getString(VendorsQuery.NAME);</span>
+<span class="nc" id="L152">            mName.setText(mNameString);</span>
+
+            // Unregister around setting checked state to avoid triggering
+            // listener since change isn't user generated.
+<span class="nc" id="L156">            mStarred.setOnCheckedChangeListener(null);</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            mStarred.setChecked(cursor.getInt(VendorsQuery.STARRED) != 0);</span>
+<span class="nc" id="L158">            mStarred.setOnCheckedChangeListener(this);</span>
+
+            // Start background fetch to load vendor logo
+<span class="nc" id="L161">            final String logoUrl = cursor.getString(VendorsQuery.LOGO_URL);</span>
+
+<span class="nc bnc" id="L163" title="All 2 branches missed.">            if (!TextUtils.isEmpty(logoUrl)) {</span>
+<span class="nc" id="L164">                BitmapUtils.fetchImage(getActivity(), logoUrl, null, null,</span>
+<span class="nc" id="L165">                        new BitmapUtils.OnFetchCompleteListener() {</span>
+                            public void onFetchComplete(Object cookie, Bitmap result) {
+<span class="nc bnc" id="L167" title="All 2 branches missed.">                                if (result == null) {</span>
+<span class="nc" id="L168">                                    mLogo.setVisibility(View.GONE);</span>
+                                } else {
+<span class="nc" id="L170">                                    mLogo.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L171">                                    mLogo.setImageBitmap(result);</span>
+                                }
+<span class="nc" id="L173">                            }</span>
+                        });
+            }
+
+<span class="nc" id="L177">            mUrl.setText(cursor.getString(VendorsQuery.URL));</span>
+<span class="nc" id="L178">            mDesc.setText(cursor.getString(VendorsQuery.DESC));</span>
+<span class="nc" id="L179">            mProductDesc.setText(cursor.getString(VendorsQuery.PRODUCT_DESC));</span>
+
+<span class="nc" id="L181">            mTrackId = cursor.getString(VendorsQuery.TRACK_ID);</span>
+
+            // Assign track details when found
+            // TODO: handle vendors not attached to track
+<span class="nc" id="L185">            ActivityHelper activityHelper = ((BaseActivity) getActivity()).getActivityHelper();</span>
+<span class="nc" id="L186">            activityHelper.setActionBarTitle(cursor.getString(VendorsQuery.TRACK_NAME));</span>
+<span class="nc" id="L187">            activityHelper.setActionBarColor(cursor.getInt(VendorsQuery.TRACK_COLOR));</span>
+
+<span class="nc" id="L189">            AnalyticsUtils.getInstance(getActivity()).trackPageView(</span>
+                    &quot;/Sandbox/Vendors/&quot; + mNameString);
+
+        } finally {
+<span class="nc" id="L193">            cursor.close();</span>
+<span class="nc" id="L194">        }</span>
+<span class="nc" id="L195">    }</span>
+
+    /**
+     * Handle toggling of starred checkbox.
+     */
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+<span class="nc" id="L201">        final ContentValues values = new ContentValues();</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        values.put(ScheduleContract.Vendors.VENDOR_STARRED, isChecked ? 1 : 0);</span>
+<span class="nc" id="L203">        mHandler.startUpdate(mVendorUri, values);</span>
+
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        AnalyticsUtils.getInstance(getActivity()).trackEvent(</span>
+                &quot;Sandbox&quot;, isChecked ? &quot;Starred&quot; : &quot;Unstarred&quot;, mNameString, 0);
+<span class="nc" id="L207">    }</span>
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+<span class="nc" id="L211">        inflater.inflate(R.menu.map_menu_items, menu);</span>
+<span class="nc" id="L212">        super.onCreateOptionsMenu(menu, inflater);</span>
+<span class="nc" id="L213">    }</span>
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L217" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_map) {</span>
+            // The room ID for the sandbox, in the map, is just the track ID
+<span class="nc" id="L219">            final Intent intent = new Intent(getActivity().getApplicationContext(),</span>
+<span class="nc" id="L220">                    UIUtils.getMapActivityClass(getActivity()));</span>
+<span class="nc" id="L221">            intent.putExtra(MapFragment.EXTRA_ROOM,</span>
+<span class="nc" id="L222">                    ParserUtils.translateTrackIdAliasInverse(mTrackId));</span>
+<span class="nc" id="L223">            startActivity(intent);</span>
+<span class="nc" id="L224">            return true;</span>
+        }
+<span class="nc" id="L226">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    /**
+     * {@link com.google.android.apps.iosched.provider.ScheduleContract.Vendors} query parameters.
+     */
+    private interface VendorsQuery {
+<span class="nc" id="L233">        String[] PROJECTION = {</span>
+                ScheduleContract.Vendors.VENDOR_NAME,
+                ScheduleContract.Vendors.VENDOR_LOCATION,
+                ScheduleContract.Vendors.VENDOR_DESC,
+                ScheduleContract.Vendors.VENDOR_URL,
+                ScheduleContract.Vendors.VENDOR_PRODUCT_DESC,
+                ScheduleContract.Vendors.VENDOR_LOGO_URL,
+                ScheduleContract.Vendors.VENDOR_STARRED,
+                ScheduleContract.Vendors.TRACK_ID,
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_COLOR,
+        };
+
+        int NAME = 0;
+        int LOCATION = 1;
+        int DESC = 2;
+        int URL = 3;
+        int PRODUCT_DESC = 4;
+        int LOGO_URL = 5;
+        int STARRED = 6;
+        int TRACK_ID = 7;
+        int TRACK_NAME = 8;
+        int TRACK_COLOR = 9;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

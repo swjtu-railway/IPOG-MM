@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeRulerView.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">TimeRulerView.java</span></div><h1>TimeRulerView.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Paint.FontMetricsInt;
+import android.graphics.Paint.Style;
+import android.graphics.Typeface;
+import android.text.format.Time;
+import android.util.AttributeSet;
+import android.view.View;
+
+/**
+ * Custom view that draws a vertical time &quot;ruler&quot; representing the chronological
+ * progression of a single day. Usually shown along with {@link BlockView}
+ * instances to give a spatial sense of time.
+ */
+public class TimeRulerView extends View {
+
+<span class="fc" id="L41">    private int mHeaderWidth = 70;</span>
+<span class="fc" id="L42">    private int mHourHeight = 90;</span>
+<span class="fc" id="L43">    private boolean mHorizontalDivider = true;</span>
+<span class="fc" id="L44">    private int mLabelTextSize = 20;</span>
+<span class="fc" id="L45">    private int mLabelPaddingLeft = 8;</span>
+<span class="fc" id="L46">    private int mLabelColor = Color.BLACK;</span>
+<span class="fc" id="L47">    private int mDividerColor = Color.LTGRAY;</span>
+<span class="fc" id="L48">    private int mStartHour = 0;</span>
+<span class="fc" id="L49">    private int mEndHour = 23;</span>
+
+    public TimeRulerView(Context context) {
+<span class="nc" id="L52">        this(context, null);</span>
+<span class="nc" id="L53">    }</span>
+
+    public TimeRulerView(Context context, AttributeSet attrs) {
+<span class="fc" id="L56">        this(context, attrs, 0);</span>
+<span class="fc" id="L57">    }</span>
+
+    public TimeRulerView(Context context, AttributeSet attrs, int defStyle) {
+<span class="fc" id="L60">        super(context, attrs, defStyle);</span>
+
+<span class="fc" id="L62">        final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.TimeRulerView,</span>
+                defStyle, 0);
+
+<span class="fc" id="L65">        mHeaderWidth = a.getDimensionPixelSize(R.styleable.TimeRulerView_headerWidth,</span>
+                mHeaderWidth);
+<span class="fc" id="L67">        mHourHeight = a</span>
+<span class="fc" id="L68">                .getDimensionPixelSize(R.styleable.TimeRulerView_hourHeight, mHourHeight);</span>
+<span class="fc" id="L69">        mHorizontalDivider = a.getBoolean(R.styleable.TimeRulerView_horizontalDivider,</span>
+                mHorizontalDivider);
+<span class="fc" id="L71">        mLabelTextSize = a.getDimensionPixelSize(R.styleable.TimeRulerView_labelTextSize,</span>
+                mLabelTextSize);
+<span class="fc" id="L73">        mLabelPaddingLeft = a.getDimensionPixelSize(R.styleable.TimeRulerView_labelPaddingLeft,</span>
+                mLabelPaddingLeft);
+<span class="fc" id="L75">        mLabelColor = a.getColor(R.styleable.TimeRulerView_labelColor, mLabelColor);</span>
+<span class="fc" id="L76">        mDividerColor = a.getColor(R.styleable.TimeRulerView_dividerColor, mDividerColor);</span>
+<span class="fc" id="L77">        mStartHour = a.getInt(R.styleable.TimeRulerView_startHour, mStartHour);</span>
+<span class="fc" id="L78">        mEndHour = a.getInt(R.styleable.TimeRulerView_endHour, mEndHour);</span>
+
+<span class="fc" id="L80">        a.recycle();</span>
+<span class="fc" id="L81">    }</span>
+
+    /**
+     * Return the vertical offset (in pixels) for a requested time (in
+     * milliseconds since epoch).
+     */
+    public int getTimeVerticalOffset(long timeMillis) {
+<span class="fc" id="L88">        Time time = new Time(UIUtils.CONFERENCE_TIME_ZONE.getID());</span>
+<span class="fc" id="L89">        time.set(timeMillis);</span>
+
+<span class="fc" id="L91">        final int minutes = ((time.hour - mStartHour) * 60) + time.minute;</span>
+<span class="fc" id="L92">        return (minutes * mHourHeight) / 60;</span>
+    }
+
+    @Override
+    protected synchronized void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+<span class="fc" id="L97">        final int hours = mEndHour - mStartHour;</span>
+
+<span class="fc" id="L99">        int width = mHeaderWidth;</span>
+<span class="fc" id="L100">        int height = mHourHeight * hours;</span>
+
+<span class="fc" id="L102">        setMeasuredDimension(resolveSize(width, widthMeasureSpec),</span>
+<span class="fc" id="L103">                resolveSize(height, heightMeasureSpec));</span>
+<span class="fc" id="L104">    }</span>
+
+<span class="fc" id="L106">    private Paint mDividerPaint = new Paint();</span>
+<span class="fc" id="L107">    private Paint mLabelPaint = new Paint();</span>
+
+    @Override
+    protected synchronized void onDraw(Canvas canvas) {
+<span class="fc" id="L111">        super.onDraw(canvas);</span>
+
+<span class="fc" id="L113">        final int hourHeight = mHourHeight;</span>
+
+<span class="fc" id="L115">        final Paint dividerPaint = mDividerPaint;</span>
+<span class="fc" id="L116">        dividerPaint.setColor(mDividerColor);</span>
+<span class="fc" id="L117">        dividerPaint.setStyle(Style.FILL);</span>
+
+<span class="fc" id="L119">        final Paint labelPaint = mLabelPaint;</span>
+<span class="fc" id="L120">        labelPaint.setColor(mLabelColor);</span>
+<span class="fc" id="L121">        labelPaint.setTextSize(mLabelTextSize);</span>
+<span class="fc" id="L122">        labelPaint.setTypeface(Typeface.DEFAULT_BOLD);</span>
+<span class="fc" id="L123">        labelPaint.setAntiAlias(true);</span>
+
+<span class="fc" id="L125">        final FontMetricsInt metrics = labelPaint.getFontMetricsInt();</span>
+<span class="fc" id="L126">        final int labelHeight = Math.abs(metrics.ascent);</span>
+<span class="fc" id="L127">        final int labelOffset = labelHeight + mLabelPaddingLeft;</span>
+
+<span class="fc" id="L129">        final int right = getRight();</span>
+
+        // Walk left side of canvas drawing timestamps
+<span class="fc" id="L132">        final int hours = mEndHour - mStartHour;</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        for (int i = 0; i &lt; hours; i++) {</span>
+<span class="fc" id="L134">            final int dividerY = hourHeight * i;</span>
+<span class="fc" id="L135">            final int nextDividerY = hourHeight * (i + 1);</span>
+<span class="fc" id="L136">            canvas.drawLine(0, dividerY, right, dividerY, dividerPaint);</span>
+
+            // draw text title for timestamp
+<span class="fc" id="L139">            canvas.drawRect(0, dividerY, mHeaderWidth, nextDividerY, dividerPaint);</span>
+
+            // TODO: localize these labels better, including handling
+            // 24-hour mode when set in framework.
+<span class="fc" id="L143">            final int hour = mStartHour + i;</span>
+            String label;
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">            if (hour == 0) {</span>
+<span class="nc" id="L146">                label = &quot;12am&quot;;</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">            } else if (hour &lt;= 11) {</span>
+<span class="fc" id="L148">                label = hour + &quot;am&quot;;</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">            } else if (hour == 12) {</span>
+<span class="fc" id="L150">                label = &quot;12pm&quot;;</span>
+            } else {
+<span class="fc" id="L152">                label = (hour - 12) + &quot;pm&quot;;</span>
+            }
+
+<span class="fc" id="L155">            final float labelWidth = labelPaint.measureText(label);</span>
+
+<span class="fc" id="L157">            canvas.drawText(label, 0, label.length(), mHeaderWidth - labelWidth</span>
+                    - mLabelPaddingLeft, dividerY + labelOffset, labelPaint);
+        }
+<span class="fc" id="L160">    }</span>
+
+    public int getHeaderWidth() {
+<span class="fc" id="L163">        return mHeaderWidth;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

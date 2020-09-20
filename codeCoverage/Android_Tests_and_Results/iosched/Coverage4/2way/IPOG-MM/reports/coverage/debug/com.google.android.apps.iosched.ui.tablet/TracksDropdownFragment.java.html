@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TracksDropdownFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.tablet</a> &gt; <span class="el_source">TracksDropdownFragment.java</span></div><h1>TracksDropdownFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.tablet;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.ui.BaseActivity;
+import com.google.android.apps.iosched.ui.SessionDetailFragment;
+import com.google.android.apps.iosched.ui.TracksAdapter;
+import com.google.android.apps.iosched.ui.TracksFragment;
+import com.google.android.apps.iosched.util.NotifyingAsyncQueryHandler;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.Intent;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListPopupWindow;
+import android.widget.PopupWindow;
+import android.widget.TextView;
+
+/**
+ * A tablet-specific fragment that is a giant {@link android.widget.Spinner}-like widget. It shows
+ * a {@link ListPopupWindow} containing a list of tracks, using {@link TracksAdapter}.
+ *
+ * Requires API level 11 or later since {@link ListPopupWindow} is API level 11+.
+ */
+<span class="nc" id="L48">public class TracksDropdownFragment extends Fragment implements</span>
+        NotifyingAsyncQueryHandler.AsyncQueryListener,
+        AdapterView.OnItemClickListener,
+        PopupWindow.OnDismissListener {
+
+    public static final String EXTRA_NEXT_TYPE = &quot;com.google.android.iosched.extra.NEXT_TYPE&quot;;
+
+    public static final String NEXT_TYPE_SESSIONS = &quot;sessions&quot;;
+    public static final String NEXT_TYPE_VENDORS = &quot;vendors&quot;;
+
+<span class="nc" id="L58">    private boolean mAutoloadTarget = true;</span>
+    private Cursor mCursor;
+    private TracksAdapter mAdapter;
+    private String mNextType;
+
+    private ListPopupWindow mListPopupWindow;
+    private ViewGroup mRootView;
+    private TextView mTitle;
+    private TextView mAbstract;
+
+    private NotifyingAsyncQueryHandler mHandler;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L72">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L73">        mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);</span>
+<span class="nc" id="L74">        mAdapter = new TracksAdapter(getActivity());</span>
+
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (savedInstanceState != null) {</span>
+            // Prevent auto-load behavior on orientation change.
+<span class="nc" id="L78">            mAutoloadTarget = false;</span>
+        }
+
+<span class="nc" id="L81">        reloadFromArguments(getArguments());</span>
+<span class="nc" id="L82">    }</span>
+
+    public void reloadFromArguments(Bundle arguments) {
+        // Teardown from previous arguments
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (mListPopupWindow != null) {</span>
+<span class="nc" id="L87">            mListPopupWindow.setAdapter(null);</span>
+        }
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (mCursor != null) {</span>
+<span class="nc" id="L90">            getActivity().stopManagingCursor(mCursor);</span>
+<span class="nc" id="L91">            mCursor = null;</span>
+        }
+<span class="nc" id="L93">        mHandler.cancelOperation(TracksAdapter.TracksQuery._TOKEN);</span>
+
+        // Load new arguments
+<span class="nc" id="L96">        final Intent intent = BaseActivity.fragmentArgumentsToIntent(arguments);</span>
+<span class="nc" id="L97">        final Uri tracksUri = intent.getData();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (tracksUri == null) {</span>
+<span class="nc" id="L99">            return;</span>
+        }
+
+<span class="nc" id="L102">        mNextType = intent.getStringExtra(EXTRA_NEXT_TYPE);</span>
+
+        // Filter our tracks query to only include those with valid results
+<span class="nc" id="L105">        String[] projection = TracksAdapter.TracksQuery.PROJECTION;</span>
+<span class="nc" id="L106">        String selection = null;</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (TracksFragment.NEXT_TYPE_SESSIONS.equals(mNextType)) {</span>
+            // Only show tracks with at least one session
+<span class="nc" id="L109">            projection = TracksAdapter.TracksQuery.PROJECTION_WITH_SESSIONS_COUNT;</span>
+<span class="nc" id="L110">            selection = ScheduleContract.Tracks.SESSIONS_COUNT + &quot;&gt;0&quot;;</span>
+
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        } else if (TracksFragment.NEXT_TYPE_VENDORS.equals(mNextType)) {</span>
+            // Only show tracks with at least one vendor
+<span class="nc" id="L114">            projection = TracksAdapter.TracksQuery.PROJECTION_WITH_VENDORS_COUNT;</span>
+<span class="nc" id="L115">            selection = ScheduleContract.Tracks.VENDORS_COUNT + &quot;&gt;0&quot;;</span>
+        }
+
+        // Start background query to load tracks
+<span class="nc" id="L119">        mHandler.startQuery(TracksAdapter.TracksQuery._TOKEN, null, tracksUri, projection,</span>
+                selection, null, ScheduleContract.Tracks.DEFAULT_SORT);
+<span class="nc" id="L121">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+<span class="nc" id="L126">        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_tracks_dropdown, null);</span>
+<span class="nc" id="L127">        mTitle = (TextView) mRootView.findViewById(R.id.track_title);</span>
+<span class="nc" id="L128">        mAbstract = (TextView) mRootView.findViewById(R.id.track_abstract);</span>
+
+<span class="nc" id="L130">        mRootView.setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L132">                mListPopupWindow = new ListPopupWindow(getActivity());</span>
+<span class="nc" id="L133">                mListPopupWindow.setAdapter(mAdapter);</span>
+<span class="nc" id="L134">                mListPopupWindow.setModal(true);</span>
+<span class="nc" id="L135">                mListPopupWindow.setContentWidth(400);</span>
+<span class="nc" id="L136">                mListPopupWindow.setAnchorView(mRootView);</span>
+<span class="nc" id="L137">                mListPopupWindow.setOnItemClickListener(TracksDropdownFragment.this);</span>
+<span class="nc" id="L138">                mListPopupWindow.show();</span>
+<span class="nc" id="L139">                mListPopupWindow.setOnDismissListener(TracksDropdownFragment.this);</span>
+<span class="nc" id="L140">            }</span>
+        });
+<span class="nc" id="L142">        return mRootView;</span>
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+<span class="nc" id="L147">        super.onActivityCreated(savedInstanceState);</span>
+<span class="nc" id="L148">    }</span>
+
+    /** {@inheritDoc} */
+    public void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="nc bnc" id="L152" title="All 4 branches missed.">        if (getActivity() == null || cursor == null) {</span>
+<span class="nc" id="L153">            return;</span>
+        }
+
+<span class="nc" id="L156">        mCursor = cursor;</span>
+<span class="nc" id="L157">        getActivity().startManagingCursor(mCursor);</span>
+
+        // If there was a last-opened track, load it. Otherwise load the first track.
+<span class="nc" id="L160">        cursor.moveToFirst();</span>
+<span class="nc" id="L161">        String lastTrackID = UIUtils.getLastUsedTrackID(getActivity());</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (lastTrackID != null) {</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">            while (!cursor.isAfterLast()) {</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                if (lastTrackID.equals(cursor.getString(TracksAdapter.TracksQuery.TRACK_ID))) {</span>
+<span class="nc" id="L165">                    break;</span>
+                }
+<span class="nc" id="L167">                cursor.moveToNext();</span>
+            }
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (cursor.isAfterLast()) {</span>
+<span class="nc" id="L171">                loadTrack(null, mAutoloadTarget);</span>
+            } else {
+<span class="nc" id="L173">                loadTrack(cursor, mAutoloadTarget);</span>
+            }
+        } else {
+<span class="nc" id="L176">            loadTrack(null, mAutoloadTarget);</span>
+        }
+
+<span class="nc" id="L179">        mAdapter.setHasAllItem(true);</span>
+<span class="nc" id="L180">        mAdapter.setIsSessions(TracksFragment.NEXT_TYPE_SESSIONS.equals(mNextType));</span>
+<span class="nc" id="L181">        mAdapter.changeCursor(mCursor);</span>
+<span class="nc" id="L182">    }</span>
+
+    /** {@inheritDoc} */
+    public void onItemClick(AdapterView&lt;?&gt; parent, View view, int position, long id) {
+<span class="nc" id="L186">        final Cursor cursor = (Cursor) mAdapter.getItem(position);</span>
+<span class="nc" id="L187">        loadTrack(cursor, true);</span>
+
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        if (cursor != null) {</span>
+<span class="nc" id="L190">            UIUtils.setLastUsedTrackID(getActivity(), cursor.getString(</span>
+                    TracksAdapter.TracksQuery.TRACK_ID));
+        } else {
+<span class="nc" id="L193">            UIUtils.setLastUsedTrackID(getActivity(), ScheduleContract.Tracks.ALL_TRACK_ID);</span>
+        }
+
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (mListPopupWindow != null) {</span>
+<span class="nc" id="L197">            mListPopupWindow.dismiss();</span>
+        }
+<span class="nc" id="L199">    }</span>
+
+    public void loadTrack(Cursor cursor, boolean loadTargetFragment) {
+        final String trackId;
+        final int trackColor;
+<span class="nc" id="L204">        final Resources res = getResources();</span>
+
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (cursor != null) {</span>
+<span class="nc" id="L207">            trackColor = cursor.getInt(TracksAdapter.TracksQuery.TRACK_COLOR);</span>
+<span class="nc" id="L208">            trackId = cursor.getString(TracksAdapter.TracksQuery.TRACK_ID);</span>
+
+<span class="nc" id="L210">            mTitle.setText(cursor.getString(TracksAdapter.TracksQuery.TRACK_NAME));</span>
+<span class="nc" id="L211">            mAbstract.setText(cursor.getString(TracksAdapter.TracksQuery.TRACK_ABSTRACT));</span>
+
+        } else {
+<span class="nc" id="L214">            trackColor = res.getColor(R.color.all_track_color);</span>
+<span class="nc" id="L215">            trackId = ScheduleContract.Tracks.ALL_TRACK_ID;</span>
+
+<span class="nc bnc" id="L217" title="All 2 branches missed.">            mTitle.setText(TracksFragment.NEXT_TYPE_SESSIONS.equals(mNextType)</span>
+                    ? R.string.all_sessions_title
+                    : R.string.all_sandbox_title);
+<span class="nc bnc" id="L220" title="All 2 branches missed.">            mAbstract.setText(TracksFragment.NEXT_TYPE_SESSIONS.equals(mNextType)</span>
+                    ? R.string.all_sessions_subtitle
+                    : R.string.all_sandbox_subtitle);
+        }
+
+<span class="nc" id="L225">        boolean isDark = UIUtils.isColorDark(trackColor);</span>
+<span class="nc" id="L226">        mRootView.setBackgroundColor(trackColor);</span>
+
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if (isDark) {</span>
+<span class="nc" id="L229">            mTitle.setTextColor(res.getColor(R.color.body_text_1_inverse));</span>
+<span class="nc" id="L230">            mAbstract.setTextColor(res.getColor(R.color.body_text_2_inverse));</span>
+<span class="nc" id="L231">            mRootView.findViewById(R.id.track_dropdown_arrow).setBackgroundResource(</span>
+                    R.drawable.track_dropdown_arrow_light);
+        } else {
+<span class="nc" id="L234">            mTitle.setTextColor(res.getColor(R.color.body_text_1));</span>
+<span class="nc" id="L235">            mAbstract.setTextColor(res.getColor(R.color.body_text_2));</span>
+<span class="nc" id="L236">            mRootView.findViewById(R.id.track_dropdown_arrow).setBackgroundResource(</span>
+                    R.drawable.track_dropdown_arrow_dark);
+        }
+
+<span class="nc bnc" id="L240" title="All 2 branches missed.">        if (loadTargetFragment) {</span>
+<span class="nc" id="L241">            final Intent intent = new Intent(Intent.ACTION_VIEW);</span>
+<span class="nc" id="L242">            final Uri trackUri = ScheduleContract.Tracks.buildTrackUri(trackId);</span>
+<span class="nc" id="L243">            intent.putExtra(SessionDetailFragment.EXTRA_TRACK, trackUri);</span>
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">            if (NEXT_TYPE_SESSIONS.equals(mNextType)) {</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">                if (cursor == null) {</span>
+<span class="nc" id="L247">                    intent.setData(ScheduleContract.Sessions.CONTENT_URI);</span>
+                } else {
+<span class="nc" id="L249">                    intent.setData(ScheduleContract.Tracks.buildSessionsUri(trackId));</span>
+                }
+<span class="nc bnc" id="L251" title="All 2 branches missed.">            } else if (NEXT_TYPE_VENDORS.equals(mNextType)) {</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">                if (cursor == null) {</span>
+<span class="nc" id="L253">                    intent.setData(ScheduleContract.Vendors.CONTENT_URI);</span>
+                } else {
+<span class="nc" id="L255">                    intent.setData(ScheduleContract.Tracks.buildVendorsUri(trackId));</span>
+                }
+            }
+
+<span class="nc" id="L259">            ((BaseActivity) getActivity()).openActivityOrFragment(intent);</span>
+        }
+<span class="nc" id="L261">    }</span>
+
+    public void onDismiss() {
+<span class="nc" id="L264">        mListPopupWindow = null;</span>
+<span class="nc" id="L265">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

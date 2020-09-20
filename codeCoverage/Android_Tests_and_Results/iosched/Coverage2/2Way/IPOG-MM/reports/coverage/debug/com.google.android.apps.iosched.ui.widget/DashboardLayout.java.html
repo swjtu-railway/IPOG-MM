@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DashboardLayout.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">DashboardLayout.java</span></div><h1>DashboardLayout.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import android.content.Context;
+import android.util.AttributeSet;
+import android.view.View;
+import android.view.ViewGroup;
+
+/**
+ * Custom layout that arranges children in a grid-like manner, optimizing for even horizontal and
+ * vertical whitespace.
+ */
+public class DashboardLayout extends ViewGroup {
+
+    private static final int UNEVEN_GRID_PENALTY_MULTIPLIER = 10;
+
+<span class="pc" id="L32">    private int mMaxChildWidth = 0;</span>
+<span class="pc" id="L33">    private int mMaxChildHeight = 0;</span>
+
+    public DashboardLayout(Context context) {
+<span class="nc" id="L36">        super(context, null);</span>
+<span class="nc" id="L37">    }</span>
+
+    public DashboardLayout(Context context, AttributeSet attrs) {
+<span class="fc" id="L40">        super(context, attrs, 0);</span>
+<span class="fc" id="L41">    }</span>
+
+    public DashboardLayout(Context context, AttributeSet attrs, int defStyle) {
+<span class="nc" id="L44">        super(context, attrs, defStyle);</span>
+<span class="nc" id="L45">    }</span>
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+<span class="fc" id="L49">        mMaxChildWidth = 0;</span>
+<span class="fc" id="L50">        mMaxChildHeight = 0;</span>
+
+        // Measure once to find the maximum child size.
+
+<span class="fc" id="L54">        int childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(</span>
+<span class="fc" id="L55">                MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.AT_MOST);</span>
+<span class="fc" id="L56">        int childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(</span>
+<span class="fc" id="L57">                MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.AT_MOST);</span>
+
+<span class="fc" id="L59">        final int count = getChildCount();</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L61">            final View child = getChildAt(i);</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">            if (child.getVisibility() == GONE) {</span>
+<span class="nc" id="L63">                continue;</span>
+            }
+
+<span class="fc" id="L66">            child.measure(childWidthMeasureSpec, childHeightMeasureSpec);</span>
+
+<span class="fc" id="L68">            mMaxChildWidth = Math.max(mMaxChildWidth, child.getMeasuredWidth());</span>
+<span class="fc" id="L69">            mMaxChildHeight = Math.max(mMaxChildHeight, child.getMeasuredHeight());</span>
+        }
+
+        // Measure again for each child to be exactly the same size.
+
+<span class="fc" id="L74">        childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(</span>
+                mMaxChildWidth, MeasureSpec.EXACTLY);
+<span class="fc" id="L76">        childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(</span>
+                mMaxChildHeight, MeasureSpec.EXACTLY);
+
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L80">            final View child = getChildAt(i);</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">            if (child.getVisibility() == GONE) {</span>
+<span class="nc" id="L82">                continue;</span>
+            }
+
+<span class="fc" id="L85">            child.measure(childWidthMeasureSpec, childHeightMeasureSpec);</span>
+        }
+
+<span class="fc" id="L88">        setMeasuredDimension(</span>
+<span class="fc" id="L89">                resolveSize(mMaxChildWidth, widthMeasureSpec),</span>
+<span class="fc" id="L90">                resolveSize(mMaxChildHeight, heightMeasureSpec));</span>
+<span class="fc" id="L91">    }</span>
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+<span class="fc" id="L95">        int width = r - l;</span>
+<span class="fc" id="L96">        int height = b - t;</span>
+
+<span class="fc" id="L98">        final int count = getChildCount();</span>
+
+        // Calculate the number of visible children.
+<span class="fc" id="L101">        int visibleCount = 0;</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L103">            final View child = getChildAt(i);</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">            if (child.getVisibility() == GONE) {</span>
+<span class="nc" id="L105">                continue;</span>
+            }
+<span class="fc" id="L107">            ++visibleCount;</span>
+        }
+
+        if (false &amp;&amp;visibleCount == 0) {
+            return;
+        }
+
+        // Calculate what number of rows and columns will optimize for even horizontal and
+        // vertical whitespace between items. Start with a 1 x N grid, then try 2 x N, and so on.
+<span class="fc" id="L116">        int bestSpaceDifference = Integer.MAX_VALUE;</span>
+        int spaceDifference;
+
+        // Horizontal and vertical space between items
+<span class="fc" id="L120">        int hSpace = 0;</span>
+<span class="fc" id="L121">        int vSpace = 0;</span>
+
+<span class="fc" id="L123">        int cols = 1;</span>
+        int rows;
+
+        while (true) {
+<span class="fc" id="L127">            rows = (visibleCount - 1) / cols + 1;</span>
+
+<span class="fc" id="L129">            hSpace = ((width - mMaxChildWidth * cols) / (cols + 1));</span>
+<span class="fc" id="L130">            vSpace = ((height - mMaxChildHeight * rows) / (rows + 1));</span>
+
+<span class="fc" id="L132">            spaceDifference = Math.abs(vSpace - hSpace);</span>
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">            if (rows * cols != visibleCount) {</span>
+<span class="nc" id="L134">                spaceDifference *= UNEVEN_GRID_PENALTY_MULTIPLIER;</span>
+            }
+
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            if (spaceDifference &lt; bestSpaceDifference) {</span>
+                // Found a better whitespace squareness/ratio
+<span class="fc" id="L139">                bestSpaceDifference = spaceDifference;</span>
+
+                // If we found a better whitespace squareness and there's only 1 row, this is
+                // the best we can do.
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">                if (rows == 1) {</span>
+<span class="nc" id="L144">                    break;</span>
+                }
+            } else {
+                // This is a worse whitespace ratio, use the previous value of cols and exit.
+<span class="fc" id="L148">                --cols;</span>
+<span class="fc" id="L149">                rows = (visibleCount - 1) / cols + 1;</span>
+<span class="fc" id="L150">                hSpace = ((width - mMaxChildWidth * cols) / (cols + 1));</span>
+<span class="fc" id="L151">                vSpace = ((height - mMaxChildHeight * rows) / (rows + 1));</span>
+<span class="fc" id="L152">                break;</span>
+            }
+
+<span class="fc" id="L155">            ++cols;</span>
+        }
+
+        // Lay out children based on calculated best-fit number of rows and cols.
+
+        // If we chose a layout that has negative horizontal or vertical space, force it to zero.
+<span class="fc" id="L161">        hSpace = Math.max(0, hSpace);</span>
+<span class="fc" id="L162">        vSpace = Math.max(0, vSpace);</span>
+
+        // Re-use width/height variables to be child width/height.
+<span class="fc" id="L165">        width = (width - hSpace * (cols + 1)) / cols;</span>
+<span class="fc" id="L166">        height = (height - vSpace * (rows + 1)) / rows;</span>
+
+        int left, top;
+        int col, row;
+<span class="fc" id="L170">        int visibleIndex = 0;</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L172">            final View child = getChildAt(i);</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">            if (child.getVisibility() == GONE) {</span>
+<span class="nc" id="L174">                continue;</span>
+            }
+
+<span class="fc" id="L177">            row = visibleIndex / cols;</span>
+<span class="fc" id="L178">            col = visibleIndex % cols;</span>
+
+<span class="fc" id="L180">            left = hSpace * (col + 1) + width * col;</span>
+<span class="fc" id="L181">            top = vSpace * (row + 1) + height * row;</span>
+
+<span class="pc bpc" id="L183" title="6 of 8 branches missed.">            child.layout(left, top,</span>
+                    (hSpace == 0 &amp;&amp; col == cols - 1) ? r : (left + width),
+                    (vSpace == 0 &amp;&amp; row == rows - 1) ? b : (top + height));
+<span class="fc" id="L186">            ++visibleIndex;</span>
+        }
+<span class="fc" id="L188">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

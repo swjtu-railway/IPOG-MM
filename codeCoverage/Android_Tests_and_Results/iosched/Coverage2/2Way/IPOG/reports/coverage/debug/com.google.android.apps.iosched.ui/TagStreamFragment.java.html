@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TagStreamFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">TagStreamFragment.java</span></div><h1>TagStreamFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
+/**
+ * A {@link WebView}-based fragment that shows Google Realtime Search results for a given query,
+ * provided as the {@link TagStreamFragment#EXTRA_QUERY} extra in the fragment arguments. If no
+ * search query is provided, the conference hashtag is used as the default query.
+ */
+<span class="fc" id="L42">public class TagStreamFragment extends Fragment {</span>
+
+    private static final String TAG = &quot;TagStreamFragment&quot;;
+
+    public static final String EXTRA_QUERY = &quot;com.google.android.iosched.extra.QUERY&quot;;
+
+    public static final String CONFERENCE_HASHTAG = &quot;#io2011&quot;;
+
+    private String mSearchString;
+    private WebView mWebView;
+    private View mLoadingSpinner;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L56">        super.onCreate(savedInstanceState);</span>
+
+<span class="fc" id="L58">        final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());</span>
+<span class="fc" id="L59">        mSearchString = intent.getStringExtra(EXTRA_QUERY);</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (TextUtils.isEmpty(mSearchString)) {</span>
+<span class="fc" id="L61">            mSearchString = CONFERENCE_HASHTAG;</span>
+        }
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (!mSearchString.startsWith(&quot;#&quot;)) {</span>
+<span class="nc" id="L64">            mSearchString = &quot;#&quot; + mSearchString;</span>
+        }
+<span class="fc" id="L66">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+
+<span class="fc" id="L72">        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_webview_with_spinner, null);</span>
+
+        // For some reason, if we omit this, NoSaveStateFrameLayout thinks we are
+        // FILL_PARENT / WRAP_CONTENT, making the progress bar stick to the top of the activity.
+<span class="fc" id="L76">        root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,</span>
+                ViewGroup.LayoutParams.FILL_PARENT));
+
+<span class="fc" id="L79">        mLoadingSpinner = root.findViewById(R.id.loading_spinner);</span>
+<span class="fc" id="L80">        mWebView = (WebView) root.findViewById(R.id.webview);</span>
+<span class="fc" id="L81">        mWebView.setWebViewClient(mWebViewClient);</span>
+
+<span class="fc" id="L83">        mWebView.post(new Runnable() {</span>
+            public void run() {
+<span class="fc" id="L85">                mWebView.getSettings().setJavaScriptEnabled(true);</span>
+<span class="fc" id="L86">                mWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);</span>
+                try {
+<span class="fc" id="L88">                    mWebView.loadUrl(</span>
+                            &quot;http://www.google.com/search?tbs=&quot;
+                            + &quot;mbl%3A1&amp;hl=en&amp;source=hp&amp;biw=1170&amp;bih=668&amp;q=&quot;
+<span class="fc" id="L91">                            + URLEncoder.encode(mSearchString, &quot;UTF-8&quot;)</span>
+                            + &quot;&amp;btnG=Search&quot;);
+<span class="nc" id="L93">                } catch (UnsupportedEncodingException e) {</span>
+<span class="nc" id="L94">                    Log.e(TAG, &quot;Could not construct the realtime search URL&quot;, e);</span>
+<span class="fc" id="L95">                }</span>
+<span class="fc" id="L96">            }</span>
+        });
+
+<span class="fc" id="L99">        return root;</span>
+    }
+
+    public void refresh() {
+<span class="nc" id="L103">        mWebView.reload();</span>
+<span class="nc" id="L104">    }</span>
+
+<span class="fc" id="L106">    private WebViewClient mWebViewClient = new WebViewClient() {</span>
+        @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+<span class="fc" id="L109">            super.onPageStarted(view, url, favicon);</span>
+<span class="fc" id="L110">            mLoadingSpinner.setVisibility(View.VISIBLE);</span>
+<span class="fc" id="L111">            mWebView.setVisibility(View.INVISIBLE);</span>
+<span class="fc" id="L112">        }</span>
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+<span class="nc" id="L116">            super.onPageFinished(view, url);</span>
+<span class="nc" id="L117">            mLoadingSpinner.setVisibility(View.GONE);</span>
+<span class="nc" id="L118">            mWebView.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L119">        }</span>
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (url.startsWith(&quot;javascript&quot;)) {</span>
+<span class="nc" id="L124">                return false;</span>
+            }
+
+<span class="nc" id="L127">            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));</span>
+<span class="nc" id="L128">            startActivity(intent);</span>
+<span class="nc" id="L129">            return true;</span>
+        }
+    };
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

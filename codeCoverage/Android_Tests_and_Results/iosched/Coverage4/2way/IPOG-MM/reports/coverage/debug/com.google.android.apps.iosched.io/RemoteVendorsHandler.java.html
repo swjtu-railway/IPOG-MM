@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RemoteVendorsHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.io</a> &gt; <span class="el_source">RemoteVendorsHandler.java</span></div><h1>RemoteVendorsHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.io;
+
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.provider.ScheduleContract.SyncColumns;
+import com.google.android.apps.iosched.provider.ScheduleContract.Vendors;
+import com.google.android.apps.iosched.util.Lists;
+import com.google.android.apps.iosched.util.ParserUtils;
+import com.google.android.apps.iosched.util.SpreadsheetEntry;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
+import android.util.Log;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.ENTRY;
+import static com.google.android.apps.iosched.util.ParserUtils.sanitizeId;
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+
+/**
+ * Handle a remote {@link XmlPullParser} that defines a set of {@link Vendors}
+ * entries. Assumes that the remote source is a Google Spreadsheet.
+ */
+public class RemoteVendorsHandler extends XmlHandler {
+    private static final String TAG = &quot;VendorsHandler&quot;;
+
+    public RemoteVendorsHandler() {
+<span class="nc" id="L52">        super(ScheduleContract.CONTENT_AUTHORITY);</span>
+<span class="nc" id="L53">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public ArrayList&lt;ContentProviderOperation&gt; parse(XmlPullParser parser, ContentResolver resolver)
+            throws XmlPullParserException, IOException {
+<span class="nc" id="L59">        final ArrayList&lt;ContentProviderOperation&gt; batch = Lists.newArrayList();</span>
+
+        // Walk document, parsing any incoming entries
+        int type;
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        while ((type = parser.next()) != END_DOCUMENT) {</span>
+<span class="nc bnc" id="L64" title="All 4 branches missed.">            if (type == START_TAG &amp;&amp; ENTRY.equals(parser.getName())) {</span>
+                // Process single spreadsheet row at a time
+<span class="nc" id="L66">                final SpreadsheetEntry entry = SpreadsheetEntry.fromParser(parser);</span>
+
+<span class="nc" id="L68">                final String vendorId = sanitizeId(entry.get(Columns.COMPANY_NAME));</span>
+<span class="nc" id="L69">                final Uri vendorUri = Vendors.buildVendorUri(vendorId);</span>
+
+                // Check for existing details, only update when changed
+<span class="nc" id="L72">                final ContentValues values = queryVendorDetails(vendorUri, resolver);</span>
+<span class="nc" id="L73">                final long localUpdated = values.getAsLong(SyncColumns.UPDATED);</span>
+<span class="nc" id="L74">                final long serverUpdated = entry.getUpdated();</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">                if (Log.isLoggable(TAG, Log.VERBOSE)) {</span>
+<span class="nc" id="L76">                    Log.v(TAG, &quot;found vendor &quot; + entry.toString());</span>
+<span class="nc" id="L77">                    Log.v(TAG, &quot;found localUpdated=&quot; + localUpdated + &quot;, server=&quot; + serverUpdated);</span>
+                }
+<span class="nc bnc" id="L79" title="All 2 branches missed.">                if (localUpdated &gt;= serverUpdated) continue;</span>
+
+                // Clear any existing values for this vendor, treating the
+                // incoming details as authoritative.
+<span class="nc" id="L83">                batch.add(ContentProviderOperation.newDelete(vendorUri).build());</span>
+
+<span class="nc" id="L85">                final ContentProviderOperation.Builder builder = ContentProviderOperation</span>
+<span class="nc" id="L86">                        .newInsert(Vendors.CONTENT_URI);</span>
+
+<span class="nc" id="L88">                builder.withValue(SyncColumns.UPDATED, serverUpdated);</span>
+<span class="nc" id="L89">                builder.withValue(Vendors.VENDOR_ID, vendorId);</span>
+<span class="nc" id="L90">                builder.withValue(Vendors.VENDOR_NAME, entry.get(Columns.COMPANY_NAME));</span>
+<span class="nc" id="L91">                builder.withValue(Vendors.VENDOR_LOCATION, entry.get(Columns.COMPANY_LOCATION));</span>
+<span class="nc" id="L92">                builder.withValue(Vendors.VENDOR_DESC, entry.get(Columns.COMPANY_DESC));</span>
+<span class="nc" id="L93">                builder.withValue(Vendors.VENDOR_URL, entry.get(Columns.COMPANY_URL));</span>
+<span class="nc" id="L94">                builder.withValue(Vendors.VENDOR_LOGO_URL, entry.get(Columns.COMPANY_LOGO));</span>
+<span class="nc" id="L95">                builder.withValue(Vendors.VENDOR_PRODUCT_DESC,</span>
+<span class="nc" id="L96">                        entry.get(Columns.COMPANY_PRODUCT_DESC));</span>
+
+                // Inherit starred value from previous row
+<span class="nc bnc" id="L99" title="All 2 branches missed.">                if (values.containsKey(Vendors.VENDOR_STARRED)) {</span>
+<span class="nc" id="L100">                    builder.withValue(Vendors.VENDOR_STARRED,</span>
+<span class="nc" id="L101">                            values.getAsInteger(Vendors.VENDOR_STARRED));</span>
+                }
+
+                // Assign track
+<span class="nc" id="L105">                final String trackId = ParserUtils.translateTrackIdAlias(sanitizeId(entry</span>
+<span class="nc" id="L106">                        .get(Columns.COMPANY_POD)));</span>
+<span class="nc" id="L107">                builder.withValue(Vendors.TRACK_ID, trackId);</span>
+
+                // Normal vendor details ready, write to provider
+<span class="nc" id="L110">                batch.add(builder.build());</span>
+<span class="nc" id="L111">            }</span>
+        }
+
+<span class="nc" id="L114">        return batch;</span>
+    }
+
+    private static ContentValues queryVendorDetails(Uri uri, ContentResolver resolver) {
+<span class="nc" id="L118">        final ContentValues values = new ContentValues();</span>
+<span class="nc" id="L119">        final Cursor cursor = resolver.query(uri, VendorsQuery.PROJECTION, null, null, null);</span>
+        try {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (cursor.moveToFirst()) {</span>
+<span class="nc" id="L122">                values.put(SyncColumns.UPDATED, cursor.getLong(VendorsQuery.UPDATED));</span>
+<span class="nc" id="L123">                values.put(Vendors.VENDOR_STARRED, cursor.getInt(VendorsQuery.STARRED));</span>
+            } else {
+<span class="nc" id="L125">                values.put(SyncColumns.UPDATED, ScheduleContract.UPDATED_NEVER);</span>
+            }
+        } finally {
+<span class="nc" id="L128">            cursor.close();</span>
+<span class="nc" id="L129">        }</span>
+<span class="nc" id="L130">        return values;</span>
+    }
+
+    private interface VendorsQuery {
+<span class="nc" id="L134">        String[] PROJECTION = {</span>
+                SyncColumns.UPDATED,
+                Vendors.VENDOR_STARRED,
+        };
+
+        int UPDATED = 0;
+        int STARRED = 1;
+    }
+
+    /** Columns coming from remote spreadsheet. */
+    private interface Columns {
+        String COMPANY_NAME = &quot;companyname&quot;;
+        String COMPANY_LOCATION = &quot;companylocation&quot;;
+        String COMPANY_DESC = &quot;companydesc&quot;;
+        String COMPANY_URL = &quot;companyurl&quot;;
+        String COMPANY_PRODUCT_DESC = &quot;companyproductdesc&quot;;
+        String COMPANY_LOGO = &quot;companylogo&quot;;
+        String COMPANY_POD = &quot;companypod&quot;;
+
+        // company_name: 280 North, Inc.
+        // company_location: San Francisco, California
+        // company_desc: Creators of 280 Slides, a web based presentation
+        // company_url: www.280north.com
+        // company_product_desc: 280 Slides relies on the Google AJAX APIs to provide
+        // company_logo: 280north.png
+        // company_pod: Google APIs
+        // company_tags:
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

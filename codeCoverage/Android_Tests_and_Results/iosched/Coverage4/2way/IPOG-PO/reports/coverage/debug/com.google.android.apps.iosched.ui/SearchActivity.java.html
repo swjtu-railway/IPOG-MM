@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SearchActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">SearchActivity.java</span></div><h1>SearchActivity.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract.Sessions;
+import com.google.android.apps.iosched.provider.ScheduleContract.Vendors;
+import com.google.android.apps.iosched.ui.phone.SessionDetailActivity;
+import com.google.android.apps.iosched.ui.phone.VendorDetailActivity;
+
+import android.app.SearchManager;
+import android.content.Intent;
+import android.os.Bundle;
+import androidx.fragment.app.FragmentManager;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.TabHost;
+import android.widget.TabWidget;
+import android.widget.TextView;
+
+/**
+ * An activity that shows session and sandbox search results. This activity can be either single
+ * or multi-pane, depending on the device configuration. We want the multi-pane support that
+ * {@link BaseMultiPaneActivity} offers, so we inherit from it instead of
+ * {@link BaseSinglePaneActivity}.
+ */
+<span class="nc" id="L42">public class SearchActivity extends BaseMultiPaneActivity {</span>
+
+    public static final String TAG_SESSIONS = &quot;sessions&quot;;
+    public static final String TAG_VENDORS = &quot;vendors&quot;;
+
+    private String mQuery;
+
+    private TabHost mTabHost;
+    private TabWidget mTabWidget;
+
+    private SessionsFragment mSessionsFragment;
+    private VendorsFragment mVendorsFragment;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L57">        super.onCreate(savedInstanceState);</span>
+
+<span class="nc" id="L59">        Intent intent = getIntent();        </span>
+<span class="nc" id="L60">        mQuery = intent.getStringExtra(SearchManager.QUERY);</span>
+
+<span class="nc" id="L62">        setContentView(R.layout.activity_search);</span>
+
+<span class="nc" id="L64">        getActivityHelper().setupActionBar(getTitle(), 0);</span>
+<span class="nc" id="L65">        final CharSequence title = getString(R.string.title_search_query, mQuery);</span>
+<span class="nc" id="L66">        getActivityHelper().setActionBarTitle(title);</span>
+
+<span class="nc" id="L68">        mTabHost = (TabHost) findViewById(android.R.id.tabhost);</span>
+<span class="nc" id="L69">        mTabWidget = (TabWidget) findViewById(android.R.id.tabs);</span>
+<span class="nc" id="L70">        mTabHost.setup();</span>
+
+<span class="nc" id="L72">        setupSessionsTab();</span>
+<span class="nc" id="L73">        setupVendorsTab();</span>
+<span class="nc" id="L74">    }</span>
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+<span class="nc" id="L78">        super.onPostCreate(savedInstanceState);</span>
+<span class="nc" id="L79">        getActivityHelper().setupSubActivity();</span>
+
+<span class="nc" id="L81">        ViewGroup detailContainer = (ViewGroup) findViewById(R.id.fragment_container_search_detail);</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">        if (detailContainer != null &amp;&amp; detailContainer.getChildCount() &gt; 1) {</span>
+<span class="nc" id="L83">            findViewById(android.R.id.empty).setVisibility(View.GONE);</span>
+        }
+<span class="nc" id="L85">    }</span>
+
+    @Override
+    public void onNewIntent(Intent intent) {
+<span class="nc" id="L89">        super.onNewIntent(intent);</span>
+<span class="nc" id="L90">        setIntent(intent);</span>
+<span class="nc" id="L91">        mQuery = intent.getStringExtra(SearchManager.QUERY);</span>
+
+<span class="nc" id="L93">        final CharSequence title = getString(R.string.title_search_query, mQuery);</span>
+<span class="nc" id="L94">        getActivityHelper().setActionBarTitle(title);</span>
+
+<span class="nc" id="L96">        mTabHost.setCurrentTab(0);</span>
+
+<span class="nc" id="L98">        mSessionsFragment.reloadFromArguments(getSessionsFragmentArguments());</span>
+<span class="nc" id="L99">        mVendorsFragment.reloadFromArguments(getVendorsFragmentArguments());</span>
+<span class="nc" id="L100">    }</span>
+
+    /**
+     * Build and add &quot;sessions&quot; tab.
+     */
+    private void setupSessionsTab() {
+        // TODO: this is very inefficient and messy, clean it up
+<span class="nc" id="L107">        FrameLayout fragmentContainer = new FrameLayout(this);</span>
+<span class="nc" id="L108">        fragmentContainer.setId(R.id.fragment_sessions);</span>
+<span class="nc" id="L109">        fragmentContainer.setLayoutParams(</span>
+                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+                        ViewGroup.LayoutParams.FILL_PARENT));
+<span class="nc" id="L112">        ((ViewGroup) findViewById(android.R.id.tabcontent)).addView(fragmentContainer);</span>
+
+<span class="nc" id="L114">        final FragmentManager fm = getSupportFragmentManager();</span>
+<span class="nc" id="L115">        mSessionsFragment = (SessionsFragment) fm.findFragmentByTag(&quot;sessions&quot;);</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">        if (mSessionsFragment == null) {</span>
+<span class="nc" id="L117">            mSessionsFragment = new SessionsFragment();</span>
+<span class="nc" id="L118">            mSessionsFragment.setArguments(getSessionsFragmentArguments());</span>
+<span class="nc" id="L119">            fm.beginTransaction()</span>
+<span class="nc" id="L120">                    .add(R.id.fragment_sessions, mSessionsFragment, &quot;sessions&quot;)</span>
+<span class="nc" id="L121">                    .commit();</span>
+        } else {
+<span class="nc" id="L123">            mSessionsFragment.reloadFromArguments(getSessionsFragmentArguments());</span>
+        }
+
+        // Sessions content comes from reused activity
+<span class="nc" id="L127">        mTabHost.addTab(mTabHost.newTabSpec(TAG_SESSIONS)</span>
+<span class="nc" id="L128">                .setIndicator(buildIndicator(R.string.starred_sessions))</span>
+<span class="nc" id="L129">                .setContent(R.id.fragment_sessions));</span>
+<span class="nc" id="L130">    }</span>
+
+    /**
+     * Build and add &quot;vendors&quot; tab.
+     */
+    private void setupVendorsTab() {
+        // TODO: this is very inefficient and messy, clean it up
+<span class="nc" id="L137">        FrameLayout fragmentContainer = new FrameLayout(this);</span>
+<span class="nc" id="L138">        fragmentContainer.setId(R.id.fragment_vendors);</span>
+<span class="nc" id="L139">        fragmentContainer.setLayoutParams(</span>
+                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+                        ViewGroup.LayoutParams.FILL_PARENT));
+<span class="nc" id="L142">        ((ViewGroup) findViewById(android.R.id.tabcontent)).addView(fragmentContainer);</span>
+
+<span class="nc" id="L144">        final FragmentManager fm = getSupportFragmentManager();</span>
+<span class="nc" id="L145">        mVendorsFragment = (VendorsFragment) fm.findFragmentByTag(&quot;vendors&quot;);</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (mVendorsFragment == null) {</span>
+<span class="nc" id="L147">            mVendorsFragment = new VendorsFragment();</span>
+<span class="nc" id="L148">            mVendorsFragment.setArguments(getVendorsFragmentArguments());</span>
+<span class="nc" id="L149">            fm.beginTransaction()</span>
+<span class="nc" id="L150">                    .add(R.id.fragment_vendors, mVendorsFragment, &quot;vendors&quot;)</span>
+<span class="nc" id="L151">                    .commit();</span>
+        } else {
+<span class="nc" id="L153">            mVendorsFragment.reloadFromArguments(getVendorsFragmentArguments());</span>
+        }
+
+        // Vendors content comes from reused activity
+<span class="nc" id="L157">        mTabHost.addTab(mTabHost.newTabSpec(TAG_VENDORS)</span>
+<span class="nc" id="L158">                .setIndicator(buildIndicator(R.string.starred_vendors))</span>
+<span class="nc" id="L159">                .setContent(R.id.fragment_vendors));</span>
+<span class="nc" id="L160">    }</span>
+
+    private Bundle getSessionsFragmentArguments() {
+<span class="nc" id="L163">        return intentToFragmentArguments(</span>
+<span class="nc" id="L164">                new Intent(Intent.ACTION_VIEW, Sessions.buildSearchUri(mQuery)));</span>
+    }
+
+    private Bundle getVendorsFragmentArguments() {
+<span class="nc" id="L168">        return intentToFragmentArguments(</span>
+<span class="nc" id="L169">                new Intent(Intent.ACTION_VIEW, Vendors.buildSearchUri(mQuery)));</span>
+    }
+
+    /**
+     * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
+     * its label.
+     */
+    private View buildIndicator(int textRes) {
+<span class="nc" id="L177">        final TextView indicator = (TextView) getLayoutInflater().inflate(R.layout.tab_indicator,</span>
+                mTabWidget, false);
+<span class="nc" id="L179">        indicator.setText(textRes);</span>
+<span class="nc" id="L180">        return indicator;</span>
+    }
+
+    @Override
+    public BaseMultiPaneActivity.FragmentReplaceInfo onSubstituteFragmentForActivityLaunch(
+            String activityClassName) {
+<span class="nc bnc" id="L186" title="All 2 branches missed.">        if (findViewById(R.id.fragment_container_search_detail) != null) {</span>
+            // The layout we currently have has a detail container, we can add fragments there.
+<span class="nc" id="L188">            findViewById(android.R.id.empty).setVisibility(View.GONE);</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            if (SessionDetailActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L190">                clearSelectedItems();</span>
+<span class="nc" id="L191">                return new BaseMultiPaneActivity.FragmentReplaceInfo(</span>
+                        SessionDetailFragment.class,
+                        &quot;session_detail&quot;,
+                        R.id.fragment_container_search_detail);
+<span class="nc bnc" id="L195" title="All 2 branches missed.">            } else if (VendorDetailActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L196">                clearSelectedItems();</span>
+<span class="nc" id="L197">                return new BaseMultiPaneActivity.FragmentReplaceInfo(</span>
+                        VendorDetailFragment.class,
+                        &quot;vendor_detail&quot;,
+                        R.id.fragment_container_search_detail);
+            }
+        }
+<span class="nc" id="L203">        return null;</span>
+    }
+
+    private void clearSelectedItems() {
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        if (mSessionsFragment != null) {</span>
+<span class="nc" id="L208">            mSessionsFragment.clearCheckedPosition();</span>
+        }
+<span class="nc bnc" id="L210" title="All 2 branches missed.">        if (mVendorsFragment != null) {</span>
+<span class="nc" id="L211">            mVendorsFragment.clearCheckedPosition();</span>
+        }
+<span class="nc" id="L213">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

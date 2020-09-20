@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MapMultiPaneActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.tablet</a> &gt; <span class="el_source">MapMultiPaneActivity.java</span></div><h1>MapMultiPaneActivity.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.tablet;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.ui.BaseMultiPaneActivity;
+import com.google.android.apps.iosched.ui.MapFragment;
+import com.google.android.apps.iosched.ui.SessionDetailFragment;
+import com.google.android.apps.iosched.ui.SessionsFragment;
+import com.google.android.apps.iosched.ui.VendorDetailFragment;
+import com.google.android.apps.iosched.ui.VendorsFragment;
+import com.google.android.apps.iosched.ui.phone.SessionDetailActivity;
+import com.google.android.apps.iosched.ui.phone.SessionsActivity;
+import com.google.android.apps.iosched.ui.phone.VendorDetailActivity;
+import com.google.android.apps.iosched.ui.phone.VendorsActivity;
+
+import android.app.FragmentBreadCrumbs;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import android.view.View;
+
+/**
+ * A multi-pane activity, where the primary navigation pane is a {@link MapFragment}, that shows
+ * {@link SessionsFragment}, {@link SessionDetailFragment}, {@link VendorsFragment}, and
+ * {@link VendorDetailFragment} as popups.
+ *
+ * This activity requires API level 11 or greater because of its use of {@link FragmentBreadCrumbs}.
+ */
+<span class="nc" id="L45">public class MapMultiPaneActivity extends BaseMultiPaneActivity implements</span>
+        View.OnClickListener, FragmentManager.OnBackStackChangedListener {
+
+    private static final int POPUP_TYPE_SESSIONS = 1;
+    private static final int POPUP_TYPE_VENDORS = 2;
+
+<span class="nc" id="L51">    private int mPopupType = -1;</span>
+<span class="nc" id="L52">    private boolean mPauseBackStackWatcher = false;</span>
+
+    private FragmentManager mFragmentManager;
+    private FragmentBreadCrumbs mFragmentBreadCrumbs;
+
+    private MapFragment mMapFragment;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L61">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L62">        setContentView(R.layout.activity_map);</span>
+
+<span class="nc" id="L64">        mFragmentManager = getSupportFragmentManager();</span>
+<span class="nc" id="L65">        mFragmentManager.addOnBackStackChangedListener(this);</span>
+
+<span class="nc" id="L67">        mFragmentBreadCrumbs = (FragmentBreadCrumbs) findViewById(R.id.breadcrumbs);</span>
+<span class="nc" id="L68">        mFragmentBreadCrumbs.setActivity(this);</span>
+
+<span class="nc" id="L70">        mMapFragment = (MapFragment) mFragmentManager.findFragmentByTag(&quot;map&quot;);</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (mMapFragment == null) {</span>
+<span class="nc" id="L72">            mMapFragment = new MapFragment();</span>
+<span class="nc" id="L73">            mMapFragment.setArguments(intentToFragmentArguments(getIntent()));</span>
+
+<span class="nc" id="L75">            mFragmentManager.beginTransaction()</span>
+<span class="nc" id="L76">                    .add(R.id.fragment_container_map, mMapFragment, &quot;map&quot;)</span>
+<span class="nc" id="L77">                    .commit();</span>
+        }
+
+<span class="nc" id="L80">        findViewById(R.id.close_button).setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L82">                clearBackStack(getSupportFragmentManager());</span>
+<span class="nc" id="L83">            }</span>
+        });
+
+<span class="nc" id="L86">        updateBreadCrumb();</span>
+<span class="nc" id="L87">    }</span>
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+<span class="nc" id="L91">        super.onPostCreate(savedInstanceState);</span>
+<span class="nc" id="L92">        getActivityHelper().setupSubActivity();</span>
+<span class="nc" id="L93">    }</span>
+
+    @Override
+    public FragmentReplaceInfo onSubstituteFragmentForActivityLaunch(String activityClassName) {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if (SessionsActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L98">            clearBackStack(getSupportFragmentManager());</span>
+<span class="nc" id="L99">            mPopupType = POPUP_TYPE_SESSIONS;</span>
+<span class="nc" id="L100">            showHideDetailAndPan(true);</span>
+<span class="nc" id="L101">            return new FragmentReplaceInfo(</span>
+                    SessionsFragment.class,
+                    &quot;sessions&quot;,
+                    R.id.fragment_container_map_detail);
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        } else if (SessionDetailActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L106">            mPopupType = POPUP_TYPE_SESSIONS;</span>
+<span class="nc" id="L107">            showHideDetailAndPan(true);</span>
+<span class="nc" id="L108">            return new FragmentReplaceInfo(</span>
+                    SessionDetailFragment.class,
+                    &quot;session_detail&quot;,
+                    R.id.fragment_container_map_detail);
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        } else if (VendorsActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L113">            clearBackStack(getSupportFragmentManager());</span>
+<span class="nc" id="L114">            mPopupType = POPUP_TYPE_VENDORS;</span>
+<span class="nc" id="L115">            showHideDetailAndPan(true);</span>
+<span class="nc" id="L116">            return new FragmentReplaceInfo(</span>
+                    VendorsFragment.class,
+                    &quot;vendors&quot;,
+                    R.id.fragment_container_map_detail);
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        } else if (VendorDetailActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L121">            mPopupType = POPUP_TYPE_VENDORS;</span>
+<span class="nc" id="L122">            showHideDetailAndPan(true);</span>
+<span class="nc" id="L123">            return new FragmentReplaceInfo(</span>
+                    VendorDetailFragment.class,
+                    &quot;vendor_detail&quot;,
+                    R.id.fragment_container_map_detail);
+        }
+<span class="nc" id="L128">        return null;</span>
+    }
+
+    @Override
+    protected void onBeforeCommitReplaceFragment(FragmentManager fm, FragmentTransaction ft,
+            Fragment fragment) {
+<span class="nc" id="L134">        super.onBeforeCommitReplaceFragment(fm, ft, fragment);</span>
+<span class="nc bnc" id="L135" title="All 4 branches missed.">        if (fragment instanceof SessionsFragment || fragment instanceof VendorsFragment) {</span>
+<span class="nc" id="L136">            mPauseBackStackWatcher = true;</span>
+<span class="nc" id="L137">            clearBackStack(fm);</span>
+<span class="nc" id="L138">            mPauseBackStackWatcher = false;</span>
+        }
+<span class="nc" id="L140">        ft.addToBackStack(null);</span>
+<span class="nc" id="L141">        updateBreadCrumb();</span>
+<span class="nc" id="L142">    }</span>
+
+    /**
+     * Handler for the breadcrumb parent.
+     */
+    public void onClick(View view) {
+<span class="nc" id="L148">        mFragmentManager.popBackStack();</span>
+<span class="nc" id="L149">    }</span>
+
+    private void clearBackStack(FragmentManager fm) {
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        while (fm.getBackStackEntryCount() &gt; 0) {</span>
+<span class="nc" id="L153">            fm.popBackStackImmediate();</span>
+        }
+<span class="nc" id="L155">    }</span>
+
+    public void onBackStackChanged() {
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (mPauseBackStackWatcher) {</span>
+<span class="nc" id="L159">            return;</span>
+        }
+
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (mFragmentManager.getBackStackEntryCount() == 0) {</span>
+<span class="nc" id="L163">            showHideDetailAndPan(false);</span>
+        }
+<span class="nc" id="L165">        updateBreadCrumb();</span>
+<span class="nc" id="L166">    }</span>
+
+    private void showHideDetailAndPan(boolean show) {
+<span class="nc" id="L169">        View detailPopup = findViewById(R.id.map_detail_popup);</span>
+<span class="nc bnc" id="L170" title="All 4 branches missed.">        if (show != (detailPopup.getVisibility() == View.VISIBLE)) {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">            detailPopup.setVisibility(show ? View.VISIBLE : View.GONE);</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">            mMapFragment.panLeft(show ? 0.25f : -0.25f);</span>
+        }
+<span class="nc" id="L174">    }</span>
+
+    public void updateBreadCrumb() {
+<span class="nc bnc" id="L177" title="All 2 branches missed.">        final String title = (mPopupType == POPUP_TYPE_SESSIONS)</span>
+<span class="nc" id="L178">                ? getString(R.string.title_sessions)</span>
+<span class="nc" id="L179">                : getString(R.string.title_vendors);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        final String detailTitle = (mPopupType == POPUP_TYPE_SESSIONS)</span>
+<span class="nc" id="L181">                ? getString(R.string.title_session_detail)</span>
+<span class="nc" id="L182">                : getString(R.string.title_vendor_detail);</span>
+
+<span class="nc bnc" id="L184" title="All 2 branches missed.">        if (mFragmentManager.getBackStackEntryCount() &gt;= 2) {</span>
+<span class="nc" id="L185">            mFragmentBreadCrumbs.setParentTitle(title, title, this);</span>
+<span class="nc" id="L186">            mFragmentBreadCrumbs.setTitle(detailTitle, detailTitle);</span>
+        } else {
+<span class="nc" id="L188">            mFragmentBreadCrumbs.setParentTitle(null, null, null);</span>
+<span class="nc" id="L189">            mFragmentBreadCrumbs.setTitle(title, title);</span>
+        }
+<span class="nc" id="L191">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

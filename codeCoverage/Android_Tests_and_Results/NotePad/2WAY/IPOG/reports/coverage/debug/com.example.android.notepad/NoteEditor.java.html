@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NoteEditor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.example.android.notepad</a> &gt; <span class="el_source">NoteEditor.java</span></div><h1>NoteEditor.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.example.android.notepad;
+
+import com.example.android.notepad.NotePad.NoteColumns;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.net.Uri;
+import android.os.Bundle;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.EditText;
+import android.widget.Toast;
+
+/**
+ * A generic activity for editing a note in a database.  This can be used
+ * either to simply view a note {@link Intent#ACTION_VIEW}, view and edit a note
+ * {@link Intent#ACTION_EDIT}, or create a new note {@link Intent#ACTION_INSERT}.  
+ */
+<span class="fc" id="L47">public class NoteEditor extends Activity {</span>
+    private static final String TAG = &quot;NoteEditor&quot;;
+
+    /**
+     * Standard projection for the interesting columns of a normal note.
+     */
+<span class="fc" id="L53">    private static final String[] PROJECTION = new String[] {</span>
+        NoteColumns._ID, // 0
+        NoteColumns.NOTE, // 1
+        NoteColumns.TITLE, // 2
+    };
+    /** The index of the note column */
+    private static final int COLUMN_INDEX_NOTE = 1;
+    /** The index of the title column */
+    private static final int COLUMN_INDEX_TITLE = 2;
+    
+    // This is our state data that is stored when freezing.
+    private static final String ORIGINAL_CONTENT = &quot;origContent&quot;;
+
+    // The different distinct states the activity can be run in.
+    private static final int STATE_EDIT = 0;
+    private static final int STATE_INSERT = 1;
+
+    private int mState;
+    private Uri mUri;
+    private Cursor mCursor;
+    private EditText mText;
+    private String mOriginalContent;
+
+    /**
+     * A custom EditText that draws lines between each line of text that is displayed.
+     */
+    public static class LinedEditText extends EditText {
+        private Rect mRect;
+        private Paint mPaint;
+
+        // we need this constructor for LayoutInflater
+        public LinedEditText(Context context, AttributeSet attrs) {
+<span class="fc" id="L85">            super(context, attrs);</span>
+            
+<span class="fc" id="L87">            mRect = new Rect();</span>
+<span class="fc" id="L88">            mPaint = new Paint();</span>
+<span class="fc" id="L89">            mPaint.setStyle(Paint.Style.STROKE);</span>
+<span class="fc" id="L90">            mPaint.setColor(0x800000FF);</span>
+<span class="fc" id="L91">        }</span>
+        
+        @Override
+        protected void onDraw(Canvas canvas) {
+<span class="fc" id="L95">            int count = getLineCount();</span>
+<span class="fc" id="L96">            Rect r = mRect;</span>
+<span class="fc" id="L97">            Paint paint = mPaint;</span>
+
+<span class="fc bfc" id="L99" title="All 2 branches covered.">            for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L100">                int baseline = getLineBounds(i, r);</span>
+
+<span class="fc" id="L102">                canvas.drawLine(r.left, baseline + 1, r.right, baseline + 1, paint);</span>
+            }
+
+<span class="fc" id="L105">            super.onDraw(canvas);</span>
+<span class="fc" id="L106">        }</span>
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L111">        super.onCreate(savedInstanceState);</span>
+
+<span class="fc" id="L113">        final Intent intent = getIntent();</span>
+
+        // Do some setup based on the action being performed.
+<span class="fc" id="L116">        final String action = intent.getAction();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (Intent.ACTION_EDIT.equals(action)) {</span>
+            // Requested to edit: set that state, and the data being edited.
+<span class="fc" id="L119">            mState = STATE_EDIT;</span>
+<span class="fc" id="L120">            mUri = intent.getData();</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        } else if (Intent.ACTION_INSERT.equals(action)) {</span>
+            // Requested to insert: set that state, and create a new entry
+            // in the container.
+<span class="fc" id="L124">            mState = STATE_INSERT;</span>
+<span class="fc" id="L125">            mUri = getContentResolver().insert(intent.getData(), null);</span>
+
+            // If we were unable to create a new note, then just finish
+            // this activity.  A RESULT_CANCELED will be sent back to the
+            // original activity if they requested a result.
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">            if (mUri == null) {</span>
+<span class="nc" id="L131">                Log.e(TAG, &quot;Failed to insert new note into &quot; + getIntent().getData());</span>
+<span class="nc" id="L132">                finish();</span>
+<span class="nc" id="L133">                return;</span>
+            }
+
+            // The new entry was created, so assume all will end well and
+            // set the result to be returned.
+<span class="fc" id="L138">            setResult(RESULT_OK, (new Intent()).setAction(mUri.toString()));</span>
+
+        } else {
+            // Whoops, unknown action!  Bail.
+<span class="nc" id="L142">            Log.e(TAG, &quot;Unknown action, exiting&quot;);</span>
+<span class="nc" id="L143">            finish();</span>
+<span class="nc" id="L144">            return;</span>
+        }
+
+        // Set the layout for this activity.  You can find it in res/layout/note_editor.xml
+<span class="fc" id="L148">        setContentView(R.layout.note_editor);</span>
+        
+        // The text view for our note, identified by its ID in the XML file.
+<span class="fc" id="L151">        mText = (EditText) findViewById(R.id.note);</span>
+
+        // Get the note!
+<span class="fc" id="L154">        mCursor = managedQuery(mUri, PROJECTION, null, null, null);</span>
+
+        // If an instance of this activity had previously stopped, we can
+        // get the original text it started with.
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">        if (savedInstanceState != null) {</span>
+<span class="nc" id="L159">            mOriginalContent = savedInstanceState.getString(ORIGINAL_CONTENT);</span>
+        }
+
+<span class="fc" id="L162">    }</span>
+
+    @Override
+    protected void onResume() {
+<span class="fc" id="L166">        super.onResume();</span>
+        // If we didn't have any trouble retrieving the data, it is now
+        // time to get at the stuff.
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+            // Requery in case something changed while paused (such as the title)
+<span class="fc" id="L171">            mCursor.requery();</span>
+            // Make sure we are at the one and only row in the cursor.
+<span class="fc" id="L173">            mCursor.moveToFirst();</span>
+
+            // Modify our overall title depending on the mode we are running in.
+<span class="fc bfc" id="L176" title="All 2 branches covered.">            if (mState == STATE_EDIT) {</span>
+                // Set the title of the Activity to include the note title
+<span class="fc" id="L178">                String title = mCursor.getString(COLUMN_INDEX_TITLE);</span>
+<span class="fc" id="L179">                Resources res = getResources();</span>
+<span class="fc" id="L180">                String text = String.format(res.getString(R.string.title_edit), title);</span>
+<span class="fc" id="L181">                setTitle(text);</span>
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">            } else if (mState == STATE_INSERT) {</span>
+<span class="fc" id="L183">                setTitle(getText(R.string.title_create));</span>
+            }
+
+            // This is a little tricky: we may be resumed after previously being
+            // paused/stopped.  We want to put the new text in the text view,
+            // but leave the user where they were (retain the cursor position
+            // etc).  This version of setText does that for us.
+<span class="fc" id="L190">            String note = mCursor.getString(COLUMN_INDEX_NOTE);</span>
+<span class="fc" id="L191">            mText.setTextKeepState(note);</span>
+            
+            // If we hadn't previously retrieved the original text, do so
+            // now.  This allows the user to revert their changes.
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">            if (mOriginalContent == null) {</span>
+<span class="fc" id="L196">                mOriginalContent = note;</span>
+            }
+
+<span class="fc" id="L199">        } else {</span>
+<span class="nc" id="L200">            setTitle(getText(R.string.error_title));</span>
+<span class="nc" id="L201">            mText.setText(getText(R.string.error_message));</span>
+        }
+<span class="fc" id="L203">    }</span>
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // Save away the original text, so we still have it if the activity
+        // needs to be killed while paused.
+<span class="nc" id="L209">        outState.putString(ORIGINAL_CONTENT, mOriginalContent);</span>
+<span class="nc" id="L210">    }</span>
+
+    @Override
+    protected void onPause() {
+<span class="fc" id="L214">        super.onPause();</span>
+        // The user is going somewhere, so make sure changes are saved
+
+<span class="fc" id="L217">        String text = mText.getText().toString();</span>
+<span class="fc" id="L218">        int length = text.length();</span>
+
+        // If this activity is finished, and there is no text, then we
+        // simply delete the note entry.
+        // Note that we do this both for editing and inserting...  it
+        // would be reasonable to only do it when inserting.
+<span class="fc bfc" id="L224" title="All 6 branches covered.">        if (isFinishing() &amp;&amp; (length == 0) &amp;&amp; mCursor != null) {</span>
+<span class="fc" id="L225">            setResult(RESULT_CANCELED);</span>
+<span class="fc" id="L226">            deleteNote();</span>
+        } else {
+<span class="fc" id="L228">            saveNote();</span>
+        }
+<span class="fc" id="L230">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate menu from XML resource
+<span class="fc" id="L235">        MenuInflater inflater = getMenuInflater();</span>
+<span class="fc" id="L236">        inflater.inflate(R.menu.editor_options_menu, menu);</span>
+
+        // Append to the
+        // menu items for any other activities that can do stuff with it
+        // as well.  This does a query on the system for any activities that
+        // implement the ALTERNATIVE_ACTION for our data, adding a menu item
+        // for each one that is found.
+<span class="fc" id="L243">        Intent intent = new Intent(null, getIntent().getData());</span>
+<span class="fc" id="L244">        intent.addCategory(Intent.CATEGORY_ALTERNATIVE);</span>
+<span class="fc" id="L245">        menu.addIntentOptions(Menu.CATEGORY_ALTERNATIVE, 0, 0,</span>
+                new ComponentName(this, NoteEditor.class), null, intent, 0, null);
+
+<span class="fc" id="L248">        return super.onCreateOptionsMenu(menu);</span>
+    }
+    
+    
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+<span class="fc bfc" id="L255" title="All 2 branches covered.">        if (mState == STATE_EDIT) {</span>
+<span class="fc" id="L256">            menu.setGroupVisible(R.id.menu_group_edit, true);</span>
+<span class="fc" id="L257">            menu.setGroupVisible(R.id.menu_group_insert, false);</span>
+            
+            // Check if note has changed and enable/disable the revert option
+<span class="fc" id="L260">            String savedNote = mCursor.getString(COLUMN_INDEX_NOTE);</span>
+<span class="fc" id="L261">            String currentNote = mText.getText().toString();</span>
+<span class="pc bpc" id="L262" title="1 of 2 branches missed.">            if (savedNote.equals(currentNote)) {</span>
+<span class="nc" id="L263">                menu.findItem(R.id.menu_revert).setEnabled(true);</span>
+            } else {
+<span class="fc" id="L265">                menu.findItem(R.id.menu_revert).setEnabled(true);</span>
+            }
+<span class="fc" id="L267">        } else {</span>
+<span class="fc" id="L268">            menu.setGroupVisible(R.id.menu_group_edit, false);</span>
+<span class="fc" id="L269">            menu.setGroupVisible(R.id.menu_group_insert, true);</span>
+        }
+<span class="fc" id="L271">        return super.onPrepareOptionsMenu(menu);</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle all of the possible menu actions.
+
+
+
+<span class="fc bfc" id="L280" title="All 4 branches covered.">        switch (item.getItemId()) {</span>
+        case R.id.menu_save:
+<span class="fc" id="L282">            saveNote();</span>
+<span class="fc" id="L283">            finish();</span>
+<span class="fc" id="L284">            break;</span>
+        case R.id.menu_delete:
+<span class="fc" id="L286">            deleteNote();</span>
+<span class="fc" id="L287">            finish();</span>
+<span class="fc" id="L288">            break;</span>
+        case R.id.menu_revert:
+        case R.id.menu_discard:
+<span class="fc" id="L291">            cancelNote();</span>
+            break;
+        }
+<span class="fc" id="L294">        return super.onOptionsItemSelected(item);</span>
+        
+    }
+    
+    private final void saveNote() {
+        // Make sure their current
+        // changes are safely saved away in the provider.  We don't need
+        // to do this if only editing.
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        if (mCursor != null) {</span>
+            // Get out updates into the provider.
+<span class="fc" id="L304">            ContentValues values = new ContentValues();</span>
+
+            // Bump the modification time to now.
+<span class="fc" id="L307">            values.put(NoteColumns.MODIFIED_DATE, System.currentTimeMillis());</span>
+
+<span class="fc" id="L309">            String text = mText.getText().toString();</span>
+<span class="fc" id="L310">            int length = text.length();</span>
+            // If we are creating a new note, then we want to also create
+            // an initial title for it.
+<span class="fc bfc" id="L313" title="All 2 branches covered.">            if (mState == STATE_INSERT) {</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">                if (length == 0) {</span>
+<span class="fc" id="L315">                    Toast.makeText(this, R.string.nothing_to_save, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L316">                    return;</span>
+                }
+<span class="fc" id="L318">                String title = text.substring(0, Math.min(30, length));</span>
+<span class="pc bpc" id="L319" title="1 of 2 branches missed.">                if (length &gt; 30) {</span>
+<span class="nc" id="L320">                    int lastSpace = title.lastIndexOf(' ');</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">                    if (lastSpace &gt; 0) {</span>
+<span class="nc" id="L322">                        title = title.substring(0, lastSpace);</span>
+                    }
+                }
+<span class="fc" id="L325">                values.put(NoteColumns.TITLE, title);</span>
+            }
+
+            // Write our text back into the provider.
+<span class="fc" id="L329">            values.put(NoteColumns.NOTE, text);</span>
+
+            // Commit all of our changes to persistent storage. When the update completes
+            // the content provider will notify the cursor of the change, which will
+            // cause the UI to be updated.
+            try {
+<span class="fc" id="L335">                getContentResolver().update(mUri, values, null, null);</span>
+<span class="nc" id="L336">            } catch (NullPointerException e) {</span>
+<span class="nc" id="L337">                Log.e(TAG, e.getMessage());</span>
+<span class="fc" id="L338">            }</span>
+            
+        }
+<span class="fc" id="L341">    }</span>
+
+    /**
+     * Take care of canceling work on a note.  Deletes the note if we
+     * had created it, otherwise reverts to the original text.
+     */
+    private final void cancelNote() {
+<span class="pc bpc" id="L348" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+<span class="fc bfc" id="L349" title="All 2 branches covered.">            if (mState == STATE_EDIT) {</span>
+                // Put the original note text back into the database
+<span class="fc" id="L351">                mCursor.close();</span>
+<span class="fc" id="L352">                mCursor = null;</span>
+<span class="fc" id="L353">                ContentValues values = new ContentValues();</span>
+<span class="fc" id="L354">                values.put(NoteColumns.NOTE, mOriginalContent);</span>
+<span class="fc" id="L355">                getContentResolver().update(mUri, values, null, null);</span>
+<span class="pc bpc" id="L356" title="1 of 2 branches missed.">            } else if (mState == STATE_INSERT) {</span>
+                // We inserted an empty note, make sure to delete it
+<span class="fc" id="L358">                deleteNote();</span>
+            }
+        }
+<span class="fc" id="L361">        setResult(RESULT_CANCELED);</span>
+<span class="fc" id="L362">        finish();</span>
+<span class="fc" id="L363">    }</span>
+
+    /**
+     * Take care of deleting a note.  Simply deletes the entry.
+     */
+    private final void deleteNote() {
+<span class="pc bpc" id="L369" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+<span class="fc" id="L370">            mCursor.close();</span>
+<span class="fc" id="L371">            mCursor = null;</span>
+<span class="fc" id="L372">            getContentResolver().delete(mUri, null, null);</span>
+<span class="fc" id="L373">            mText.setText(&quot;&quot;);</span>
+        }
+<span class="fc" id="L375">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

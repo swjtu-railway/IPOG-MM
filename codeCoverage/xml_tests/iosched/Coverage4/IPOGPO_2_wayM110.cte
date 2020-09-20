@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CteObject id="c1"> 
+  <Tree root="c3" id="c2" name="p110_tree"> 
+    <Composition id="c3" name="p110" x="0" y="0"> 
+      <Composition id="c4" name="p110_sequence" x="0" y="0"> 
+        <Composition id="c5" name="DASHBOARD_click_Schedule_btn" x="0" y="0"/>  
+        <Composition id="c6" name="SCHEDULE_scroll_Up" x="0" y="0"/>  
+        <Composition id="c7" name="SCHEDULE_click_Home_btn" x="0" y="0"/>  
+        <Composition id="c8" name="DASHBOARD_click_Starred_btn" x="0" y="0"/>  
+        <Composition id="c9" name="STARRED_click_Sandbox_tab" x="0" y="0"/> 
+      </Composition> 
+    </Composition> 
+  </Tree>  
+  <TestGroup id="c10" name="TG"/> 
+</CteObject>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotifyingAsyncQueryHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">NotifyingAsyncQueryHandler.java</span></div><h1>NotifyingAsyncQueryHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2009 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import android.content.AsyncQueryHandler;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
+
+import java.lang.ref.WeakReference;
+
+/**
+ * Slightly more abstract {@link AsyncQueryHandler} that helps keep a
+ * {@link WeakReference} back to a listener. Will properly close any
+ * {@link Cursor} if the listener ceases to exist.
+ * &lt;p&gt;
+ * This pattern can be used to perform background queries without leaking
+ * {@link Context} objects.
+ *
+ * @hide pending API council review
+ */
+public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
+    private WeakReference&lt;AsyncQueryListener&gt; mListener;
+
+    /**
+     * Interface to listen for completed query operations.
+     */
+    public interface AsyncQueryListener {
+        void onQueryComplete(int token, Object cookie, Cursor cursor);
+    }
+
+    public NotifyingAsyncQueryHandler(ContentResolver resolver, AsyncQueryListener listener) {
+<span class="fc" id="L49">        super(resolver);</span>
+<span class="fc" id="L50">        setQueryListener(listener);</span>
+<span class="fc" id="L51">    }</span>
+
+    /**
+     * Assign the given {@link AsyncQueryListener} to receive query events from
+     * asynchronous calls. Will replace any existing listener.
+     */
+    public void setQueryListener(AsyncQueryListener listener) {
+<span class="fc" id="L58">        mListener = new WeakReference&lt;AsyncQueryListener&gt;(listener);</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Clear any {@link AsyncQueryListener} set through
+     * {@link #setQueryListener(AsyncQueryListener)}
+     */
+    public void clearQueryListener() {
+<span class="nc" id="L66">        mListener = null;</span>
+<span class="nc" id="L67">    }</span>
+
+    /**
+     * Begin an asynchronous query with the given arguments. When finished,
+     * {@link AsyncQueryListener#onQueryComplete(int, Object, Cursor)} is
+     * called if a valid {@link AsyncQueryListener} is present.
+     */
+    public void startQuery(Uri uri, String[] projection) {
+<span class="nc" id="L75">        startQuery(-1, null, uri, projection, null, null, null);</span>
+<span class="nc" id="L76">    }</span>
+
+    /**
+     * Begin an asynchronous query with the given arguments. When finished,
+     * {@link AsyncQueryListener#onQueryComplete(int, Object, Cursor)} is called
+     * if a valid {@link AsyncQueryListener} is present.
+     *
+     * @param token Unique identifier passed through to
+     *            {@link AsyncQueryListener#onQueryComplete(int, Object, Cursor)}
+     */
+    public void startQuery(int token, Uri uri, String[] projection) {
+<span class="fc" id="L87">        startQuery(token, null, uri, projection, null, null, null);</span>
+<span class="fc" id="L88">    }</span>
+
+    /**
+     * Begin an asynchronous query with the given arguments. When finished,
+     * {@link AsyncQueryListener#onQueryComplete(int, Object, Cursor)} is called
+     * if a valid {@link AsyncQueryListener} is present.
+     */
+    public void startQuery(Uri uri, String[] projection, String sortOrder) {
+<span class="nc" id="L96">        startQuery(-1, null, uri, projection, null, null, sortOrder);</span>
+<span class="nc" id="L97">    }</span>
+
+    /**
+     * Begin an asynchronous query with the given arguments. When finished,
+     * {@link AsyncQueryListener#onQueryComplete(int, Object, Cursor)} is called
+     * if a valid {@link AsyncQueryListener} is present.
+     */
+    public void startQuery(Uri uri, String[] projection, String selection,
+            String[] selectionArgs, String orderBy) {
+<span class="fc" id="L106">        startQuery(-1, null, uri, projection, selection, selectionArgs, orderBy);</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Begin an asynchronous update with the given arguments.
+     */
+    public void startUpdate(Uri uri, ContentValues values) {
+<span class="fc" id="L113">        startUpdate(-1, null, uri, values, null, null);</span>
+<span class="fc" id="L114">    }</span>
+
+    public void startInsert(Uri uri, ContentValues values) {
+<span class="nc" id="L117">        startInsert(-1, null, uri, values);</span>
+<span class="nc" id="L118">    }</span>
+
+    public void startDelete(Uri uri) {
+<span class="nc" id="L121">        startDelete(-1, null, uri, null, null);</span>
+<span class="nc" id="L122">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">        final AsyncQueryListener listener = mListener == null ? null : mListener.get();</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        if (listener != null) {</span>
+<span class="fc" id="L129">            listener.onQueryComplete(token, cookie, cursor);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        } else if (cursor != null) {</span>
+<span class="nc" id="L131">            cursor.close();</span>
+        }
+<span class="fc" id="L133">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

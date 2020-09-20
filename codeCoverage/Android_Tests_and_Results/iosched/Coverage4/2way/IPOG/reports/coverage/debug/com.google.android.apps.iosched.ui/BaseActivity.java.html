@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">BaseActivity.java</span></div><h1>BaseActivity.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.util.ActivityHelper;
+
+
+import androidx.fragment.app.FragmentActivity;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+//import android.support.v4.app.FragmentActivity;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+
+//import androidx.fragment.app.Fragment;
+
+/**
+ * A base activity that defers common functionality across app activities to an
+ * {@link ActivityHelper}. This class shouldn't be used directly; instead, activities should
+ * inherit from {@link BaseSinglePaneActivity} or {@link BaseMultiPaneActivity}.
+ */
+<span class="fc" id="L38">public abstract class BaseActivity extends FragmentActivity {</span>
+<span class="fc" id="L39">    final ActivityHelper mActivityHelper = ActivityHelper.createInstance(this);</span>
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+<span class="fc" id="L43">        super.onPostCreate(savedInstanceState);</span>
+<span class="fc" id="L44">        mActivityHelper.onPostCreate(savedInstanceState);</span>
+<span class="fc" id="L45">    }</span>
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        return mActivityHelper.onKeyLongPress(keyCode, event) ||</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                super.onKeyLongPress(keyCode, event);</span>
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">        return mActivityHelper.onKeyDown(keyCode, event) ||</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">                super.onKeyDown(keyCode, event);</span>
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="pc bpc" id="L61" title="2 of 4 branches missed.">        return mActivityHelper.onCreateOptionsMenu(menu) || super.onCreateOptionsMenu(menu);</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="pc bpc" id="L66" title="3 of 4 branches missed.">        return mActivityHelper.onOptionsItemSelected(item) || super.onOptionsItemSelected(item);</span>
+    }
+
+    /**
+     * Returns the {@link ActivityHelper} object associated with this activity.
+     */
+    protected ActivityHelper getActivityHelper() {
+<span class="fc" id="L73">        return mActivityHelper;</span>
+    }
+
+    /**
+     * Takes a given intent and either starts a new activity to handle it (the default behavior),
+     * or creates/updates a fragment (in the case of a multi-pane activity) that can handle the
+     * intent.
+     *
+     * Must be called from the main (UI) thread.
+     */
+    public void openActivityOrFragment(Intent intent) {
+        // Default implementation simply calls startActivity
+<span class="fc" id="L85">        startActivity(intent);</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Converts an intent into a {@link Bundle} suitable for use as fragment arguments.
+     */
+    public static Bundle intentToFragmentArguments(Intent intent) {
+<span class="fc" id="L92">        Bundle arguments = new Bundle();</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        if (intent == null) {</span>
+<span class="nc" id="L94">            return arguments;</span>
+        }
+
+<span class="fc" id="L97">        final Uri data = intent.getData();</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        if (data != null) {</span>
+<span class="fc" id="L99">            arguments.putParcelable(&quot;_uri&quot;, data);</span>
+        }
+
+<span class="fc" id="L102">        final Bundle extras = intent.getExtras();</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (extras != null) {</span>
+<span class="fc" id="L104">            arguments.putAll(intent.getExtras());</span>
+        }
+
+<span class="fc" id="L107">        return arguments;</span>
+    }
+
+    /**
+     * Converts a fragment arguments bundle into an intent.
+     */
+    public static Intent fragmentArgumentsToIntent(Bundle arguments) {
+<span class="fc" id="L114">        Intent intent = new Intent();</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (arguments == null) {</span>
+<span class="nc" id="L116">            return intent;</span>
+        }
+
+<span class="fc" id="L119">        final Uri data = arguments.getParcelable(&quot;_uri&quot;);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">        if (data != null) {</span>
+<span class="fc" id="L121">            intent.setData(data);</span>
+        }
+
+<span class="fc" id="L124">        intent.putExtras(arguments);</span>
+<span class="fc" id="L125">        intent.removeExtra(&quot;_uri&quot;);</span>
+<span class="fc" id="L126">        return intent;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

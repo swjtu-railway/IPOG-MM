@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BlocksLayout.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.widget</a> &gt; <span class="el_source">BlocksLayout.java</span></div><h1>BlocksLayout.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.widget;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.util.UIUtils;
+
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.util.AttributeSet;
+import android.view.View;
+import android.view.ViewGroup;
+
+/**
+ * Custom layout that contains and organizes a {@link TimeRulerView} and several
+ * instances of {@link BlockView}. Also positions current &quot;now&quot; divider using
+ * {@link R.id#blocks_now} view when applicable.
+ */
+public class BlocksLayout extends ViewGroup {
+<span class="fc" id="L34">    private int mColumns = 3;</span>
+
+    private TimeRulerView mRulerView;
+    private View mNowView;
+
+    public BlocksLayout(Context context) {
+<span class="nc" id="L40">        this(context, null);</span>
+<span class="nc" id="L41">    }</span>
+
+    public BlocksLayout(Context context, AttributeSet attrs) {
+<span class="fc" id="L44">        this(context, attrs, 0);</span>
+<span class="fc" id="L45">    }</span>
+
+    public BlocksLayout(Context context, AttributeSet attrs, int defStyle) {
+<span class="fc" id="L48">        super(context, attrs, defStyle);</span>
+
+<span class="fc" id="L50">        final TypedArray a = context.obtainStyledAttributes(attrs,</span>
+                R.styleable.BlocksLayout, defStyle, 0);
+
+<span class="fc" id="L53">        mColumns = a.getInt(R.styleable.TimeRulerView_headerWidth, mColumns);</span>
+
+<span class="fc" id="L55">        a.recycle();</span>
+<span class="fc" id="L56">    }</span>
+
+    private void ensureChildren() {
+<span class="fc" id="L59">        mRulerView = (TimeRulerView) findViewById(R.id.blocks_ruler);</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (mRulerView == null) {</span>
+<span class="nc" id="L61">            throw new IllegalStateException(&quot;Must include a R.id.blocks_ruler view.&quot;);</span>
+        }
+<span class="fc" id="L63">        mRulerView.setDrawingCacheEnabled(true);</span>
+
+<span class="fc" id="L65">        mNowView = findViewById(R.id.blocks_now);</span>
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if (mNowView == null) {</span>
+<span class="nc" id="L67">            throw new IllegalStateException(&quot;Must include a R.id.blocks_now view.&quot;);</span>
+        }
+<span class="fc" id="L69">        mNowView.setDrawingCacheEnabled(true);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Remove any {@link BlockView} instances, leaving only
+     * {@link TimeRulerView} remaining.
+     */
+    public void removeAllBlocks() {
+<span class="fc" id="L77">        ensureChildren();</span>
+<span class="fc" id="L78">        removeAllViews();</span>
+<span class="fc" id="L79">        addView(mRulerView);</span>
+<span class="fc" id="L80">        addView(mNowView);</span>
+<span class="fc" id="L81">    }</span>
+
+    public void addBlock(BlockView blockView) {
+<span class="fc" id="L84">        blockView.setDrawingCacheEnabled(true);</span>
+<span class="fc" id="L85">        addView(blockView, 1);</span>
+<span class="fc" id="L86">    }</span>
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+<span class="fc" id="L90">        ensureChildren();</span>
+
+<span class="fc" id="L92">        mRulerView.measure(widthMeasureSpec, heightMeasureSpec);</span>
+<span class="fc" id="L93">        mNowView.measure(widthMeasureSpec, heightMeasureSpec);</span>
+
+<span class="fc" id="L95">        final int width = mRulerView.getMeasuredWidth();</span>
+<span class="fc" id="L96">        final int height = mRulerView.getMeasuredHeight();</span>
+
+<span class="fc" id="L98">        setMeasuredDimension(resolveSize(width, widthMeasureSpec),</span>
+<span class="fc" id="L99">                resolveSize(height, heightMeasureSpec));</span>
+<span class="fc" id="L100">    }</span>
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+<span class="fc" id="L104">        ensureChildren();</span>
+
+<span class="fc" id="L106">        final TimeRulerView rulerView = mRulerView;</span>
+<span class="fc" id="L107">        final int headerWidth = rulerView.getHeaderWidth();</span>
+<span class="fc" id="L108">        final int columnWidth = (getWidth() - headerWidth) / mColumns;</span>
+
+<span class="fc" id="L110">        rulerView.layout(0, 0, getWidth(), getHeight());</span>
+
+<span class="fc" id="L112">        final int count = getChildCount();</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        for (int i = 0; i &lt; count; i++) {</span>
+<span class="fc" id="L114">            final View child = getChildAt(i);</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if (child.getVisibility() == GONE) continue;</span>
+
+<span class="fc bfc" id="L117" title="All 2 branches covered.">            if (child instanceof BlockView) {</span>
+<span class="fc" id="L118">                final BlockView blockView = (BlockView) child;</span>
+<span class="fc" id="L119">                final int top = rulerView.getTimeVerticalOffset(blockView.getStartTime());</span>
+<span class="fc" id="L120">                final int bottom = rulerView.getTimeVerticalOffset(blockView.getEndTime());</span>
+<span class="fc" id="L121">                final int left = headerWidth + (blockView.getColumn() * columnWidth);</span>
+<span class="fc" id="L122">                final int right = left + columnWidth;</span>
+<span class="fc" id="L123">                child.layout(left, top, right, bottom);</span>
+            }
+        }
+
+        // Align now view to match current time
+<span class="fc" id="L128">        final View nowView = mNowView;</span>
+<span class="fc" id="L129">        final long now = UIUtils.getCurrentTime(getContext());</span>
+
+<span class="fc" id="L131">        final int top = rulerView.getTimeVerticalOffset(now);</span>
+<span class="fc" id="L132">        final int bottom = top + nowView.getMeasuredHeight();</span>
+<span class="fc" id="L133">        final int left = 0;</span>
+<span class="fc" id="L134">        final int right = getWidth();</span>
+
+<span class="fc" id="L136">        nowView.layout(left, top, right, bottom);</span>
+<span class="fc" id="L137">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

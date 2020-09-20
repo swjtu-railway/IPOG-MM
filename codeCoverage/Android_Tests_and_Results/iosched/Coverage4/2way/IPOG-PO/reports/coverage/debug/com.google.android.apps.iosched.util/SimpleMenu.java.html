@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimpleMenu.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">SimpleMenu.java</span></div><h1>SimpleMenu.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.Resources;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SubMenu;
+
+import java.util.ArrayList;
+
+/**
+ * A &lt;em&gt;really&lt;/em&gt; dumb implementation of the {@link Menu} interface, that's only useful for our
+ * old-actionbar purposes. See &lt;code&gt;com.android.internal.view.menu.MenuBuilder&lt;/code&gt; in AOSP for
+ * a more complete implementation.
+ */
+public class SimpleMenu implements Menu {
+
+    private Context mContext;
+    private Resources mResources;
+
+    private ArrayList&lt;SimpleMenuItem&gt; mItems;
+
+<span class="nc" id="L42">    public SimpleMenu(Context context) {</span>
+<span class="nc" id="L43">        mContext = context;</span>
+<span class="nc" id="L44">        mResources = context.getResources();</span>
+<span class="nc" id="L45">        mItems = new ArrayList&lt;SimpleMenuItem&gt;();</span>
+<span class="nc" id="L46">    }</span>
+
+    public Context getContext() {
+<span class="nc" id="L49">        return mContext;</span>
+    }
+
+    public Resources getResources() {
+<span class="nc" id="L53">        return mResources;</span>
+    }
+
+    public MenuItem add(CharSequence title) {
+<span class="nc" id="L57">        return addInternal(0, 0, title);</span>
+    }
+
+    public MenuItem add(int titleRes) {
+<span class="nc" id="L61">        return addInternal(0, 0, mResources.getString(titleRes));</span>
+    }
+
+    public MenuItem add(int groupId, int itemId, int order, CharSequence title) {
+<span class="nc" id="L65">        return addInternal(itemId, order, title);</span>
+    }
+
+    public MenuItem add(int groupId, int itemId, int order, int titleRes) {
+<span class="nc" id="L69">        return addInternal(itemId, order, mResources.getString(titleRes));</span>
+    }
+
+    /**
+     * Adds an item to the menu.  The other add methods funnel to this.
+     */
+    private MenuItem addInternal(int itemId, int order, CharSequence title) {
+<span class="nc" id="L76">        final SimpleMenuItem item = new SimpleMenuItem(this, itemId, order, title);</span>
+<span class="nc" id="L77">        mItems.add(findInsertIndex(mItems, order), item);</span>
+<span class="nc" id="L78">        return item;</span>
+    }
+
+    private static int findInsertIndex(ArrayList&lt;? extends MenuItem&gt; items, int order) {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        for (int i = items.size() - 1; i &gt;= 0; i--) {</span>
+<span class="nc" id="L83">            MenuItem item = items.get(i);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (item.getOrder() &lt;= order) {</span>
+<span class="nc" id="L85">                return i + 1;</span>
+            }
+        }
+
+<span class="nc" id="L89">        return 0;</span>
+    }
+
+    public int findItemIndex(int id) {
+<span class="nc" id="L93">        final int size = size();</span>
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L96">            SimpleMenuItem item = mItems.get(i);</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (item.getItemId() == id) {</span>
+<span class="nc" id="L98">                return i;</span>
+            }
+        }
+
+<span class="nc" id="L102">        return -1;</span>
+    }
+
+    public void removeItem(int itemId) {
+<span class="nc" id="L106">        removeItemAtInt(findItemIndex(itemId));</span>
+<span class="nc" id="L107">    }</span>
+
+    private void removeItemAtInt(int index) {
+<span class="nc bnc" id="L110" title="All 4 branches missed.">        if ((index &lt; 0) || (index &gt;= mItems.size())) {</span>
+<span class="nc" id="L111">            return;</span>
+        }
+<span class="nc" id="L113">        mItems.remove(index);</span>
+<span class="nc" id="L114">    }</span>
+
+    public void clear() {
+<span class="nc" id="L117">        mItems.clear();</span>
+<span class="nc" id="L118">    }</span>
+
+    public MenuItem findItem(int id) {
+<span class="nc" id="L121">        final int size = size();</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L123">            SimpleMenuItem item = mItems.get(i);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (item.getItemId() == id) {</span>
+<span class="nc" id="L125">                return item;</span>
+            }
+        }
+
+<span class="nc" id="L129">        return null;</span>
+    }
+
+    public int size() {
+<span class="nc" id="L133">        return mItems.size();</span>
+    }
+
+    public MenuItem getItem(int index) {
+<span class="nc" id="L137">        return mItems.get(index);</span>
+    }
+
+    // Unsupported operations.
+
+    public SubMenu addSubMenu(CharSequence charSequence) {
+<span class="nc" id="L143">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public SubMenu addSubMenu(int titleRes) {
+<span class="nc" id="L147">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public SubMenu addSubMenu(int groupId, int itemId, int order, CharSequence title) {
+<span class="nc" id="L151">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public SubMenu addSubMenu(int groupId, int itemId, int order, int titleRes) {
+<span class="nc" id="L155">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public int addIntentOptions(int i, int i1, int i2, ComponentName componentName,
+            Intent[] intents, Intent intent, int i3, MenuItem[] menuItems) {
+<span class="nc" id="L160">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void removeGroup(int i) {
+<span class="nc" id="L164">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void setGroupCheckable(int i, boolean b, boolean b1) {
+<span class="nc" id="L168">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void setGroupVisible(int i, boolean b) {
+<span class="nc" id="L172">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void setGroupEnabled(int i, boolean b) {
+<span class="nc" id="L176">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public boolean hasVisibleItems() {
+<span class="nc" id="L180">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void close() {
+<span class="nc" id="L184">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public boolean performShortcut(int i, KeyEvent keyEvent, int i1) {
+<span class="nc" id="L188">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public boolean isShortcutKey(int i, KeyEvent keyEvent) {
+<span class="nc" id="L192">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public boolean performIdentifierAction(int i, int i1) {
+<span class="nc" id="L196">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+
+    public void setQwertyMode(boolean b) {
+<span class="nc" id="L200">        throw new UnsupportedOperationException(&quot;This operation is not supported for SimpleMenu&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

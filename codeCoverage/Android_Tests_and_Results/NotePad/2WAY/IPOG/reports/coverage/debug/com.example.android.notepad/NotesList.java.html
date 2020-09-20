@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotesList.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.example.android.notepad</a> &gt; <span class="el_source">NotesList.java</span></div><h1>NotesList.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.example.android.notepad;
+
+import com.example.android.notepad.NotePad.NoteColumns;
+
+import android.app.AlertDialog;
+import android.app.ListActivity;
+import android.content.ComponentName;
+import android.content.ContentUris;
+import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.ContextMenu;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
+
+import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
+
+//import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
+
+/**
+ * Displays a list of notes. Will display notes from the {@link Uri}
+ * provided in the intent if there is one, otherwise defaults to displaying the
+ * contents of the {@link NotePadProvider}
+ */
+
+<span class="fc" id="L50">public class NotesList extends ListActivity {</span>
+    private static final String TAG = &quot;NotesList&quot;;
+
+    /**
+     * The columns we are interested in from the database
+     */
+<span class="fc" id="L56">    private static final String[] PROJECTION = new String[] {</span>
+        NoteColumns._ID, // 0
+        NoteColumns.TITLE, // 1
+    };
+
+    /** The index of the title column */
+    private static final int COLUMN_INDEX_TITLE = 1;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L66">        super.onCreate(savedInstanceState);</span>
+
+<span class="fc" id="L68">        setDefaultKeyMode(DEFAULT_KEYS_SHORTCUT);</span>
+
+        // If no data was given in the intent (because we were started
+        // as a MAIN activity), then use our default content provider.
+<span class="fc" id="L72">        Intent intent = getIntent();</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if (intent.getData() == null) {</span>
+<span class="fc" id="L74">            intent.setData(NoteColumns.CONTENT_URI);</span>
+        }
+
+        // Inform the list we provide context menus for items
+<span class="fc" id="L78">        getListView().setOnCreateContextMenuListener(this);</span>
+
+        //!!! We have added the following statement to avoid bugs.
+//        getListView().setLongClickable(false);
+
+
+        // Perform a managed query. The Activity will handle closing and requerying the cursor
+        // when needed.
+<span class="fc" id="L86">        Cursor cursor = managedQuery(getIntent().getData(), PROJECTION, null, null,</span>
+                                        NoteColumns.DEFAULT_SORT_ORDER);
+
+        // Used to map notes entries from the database to views
+<span class="fc" id="L90">        SimpleCursorAdapter adapter = new SimpleCursorAdapter(this, R.layout.noteslist_item, cursor,</span>
+                new String[] { NoteColumns.TITLE }, new int[] { android.R.id.text1 });
+<span class="fc" id="L92">        setListAdapter(adapter);</span>
+
+
+<span class="fc" id="L95">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate menu from XML resource
+<span class="fc" id="L100">        MenuInflater inflater = getMenuInflater();</span>
+<span class="fc" id="L101">        inflater.inflate(R.menu.list_options_menu, menu);</span>
+        
+        // Generate any additional actions that can be performed on the
+        // overall list.  In a normal install, there are no additional
+        // actions found here, but this allows other applications to extend
+        // our menu with their own actions.
+<span class="fc" id="L107">        Intent intent = new Intent(null, getIntent().getData());</span>
+<span class="fc" id="L108">        intent.addCategory(Intent.CATEGORY_ALTERNATIVE);</span>
+<span class="fc" id="L109">        menu.addIntentOptions(Menu.CATEGORY_ALTERNATIVE, 0, 0,</span>
+                new ComponentName(this, NotesList.class), null, intent, 0, null);
+
+<span class="fc" id="L112">        return super.onCreateOptionsMenu(menu);</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">        switch (item.getItemId()) {</span>
+        case R.id.menu_add:
+            // Launch activity to insert a new item
+<span class="fc" id="L120">            Intent intent = new Intent(Intent.ACTION_INSERT, getIntent().getData());</span>
+<span class="fc" id="L121">            intent.addFlags(FLAG_ACTIVITY_NEW_TASK);</span>
+<span class="fc" id="L122">            startActivity(intent);</span>
+<span class="fc" id="L123">            return true;</span>
+        default:
+<span class="nc" id="L125">            return super.onOptionsItemSelected(item);</span>
+        }
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View view, ContextMenuInfo menuInfo) {
+        AdapterView.AdapterContextMenuInfo info;
+        try {
+<span class="fc" id="L133">             info = (AdapterView.AdapterContextMenuInfo) menuInfo;</span>
+<span class="nc" id="L134">        } catch (ClassCastException e) {</span>
+<span class="nc" id="L135">            Log.e(TAG, &quot;bad menuInfo&quot;, e);</span>
+<span class="nc" id="L136">            return;</span>
+<span class="fc" id="L137">        }</span>
+
+<span class="fc" id="L139">        Cursor cursor = (Cursor) getListAdapter().getItem(info.position);</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">        if (cursor == null) {</span>
+            // For some reason the requested item isn't available, do nothing
+<span class="nc" id="L142">            return;</span>
+        }
+
+        // Inflate menu from XML resource
+<span class="fc" id="L146">        MenuInflater inflater = getMenuInflater();</span>
+<span class="fc" id="L147">        inflater.inflate(R.menu.list_context_menu, menu);</span>
+        
+        // Set the context menu header
+<span class="fc" id="L150">        menu.setHeaderTitle(cursor.getString(COLUMN_INDEX_TITLE));</span>
+        
+        // Append to the
+        // menu items for any other activities that can do stuff with it
+        // as well.  This does a query on the system for any activities that
+        // implement the ALTERNATIVE_ACTION for our data, adding a menu item
+        // for each one that is found.
+<span class="fc" id="L157">        Intent intent = new Intent(null, Uri.withAppendedPath(getIntent().getData(), </span>
+<span class="fc" id="L158">                                        Integer.toString((int) info.id) ));</span>
+<span class="fc" id="L159">        intent.addCategory(Intent.CATEGORY_ALTERNATIVE);</span>
+<span class="fc" id="L160">        menu.addIntentOptions(Menu.CATEGORY_ALTERNATIVE, 0, 0,</span>
+                new ComponentName(this, NotesList.class), null, intent, 0, null);
+<span class="fc" id="L162">    }</span>
+        
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info;
+        try {
+<span class="fc" id="L168">             info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();</span>
+<span class="nc" id="L169">        } catch (ClassCastException e) {</span>
+<span class="nc" id="L170">            Log.e(TAG, &quot;bad menuInfo&quot;, e);</span>
+<span class="nc" id="L171">            return false;</span>
+<span class="fc" id="L172">        }</span>
+        
+<span class="fc" id="L174">        Uri noteUri = ContentUris.withAppendedId(getIntent().getData(), info.id);</span>
+
+<span class="fc bfc" id="L176" title="All 3 branches covered.">        switch (item.getItemId()) {</span>
+        case R.id.context_open:
+            // Launch activity to view/edit the currently selected item
+<span class="fc" id="L179">            Intent intent = new Intent(Intent.ACTION_EDIT, noteUri);</span>
+<span class="fc" id="L180">            intent.addFlags(FLAG_ACTIVITY_NEW_TASK);</span>
+<span class="fc" id="L181">            startActivity(intent);</span>
+<span class="fc" id="L182">            return true;</span>
+        case R.id.context_delete:
+            // Delete the note that the context menu is for
+<span class="fc" id="L185">            getContentResolver().delete(noteUri, null, null);</span>
+<span class="fc" id="L186">            return true;</span>
+        default:
+<span class="fc" id="L188">            return super.onContextItemSelected(item);</span>
+        }
+    }
+
+    @Override
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+<span class="fc" id="L194">        Uri noteUri = ContentUris.withAppendedId(getIntent().getData(), id);</span>
+
+
+<span class="fc" id="L197">        String action = getIntent().getAction();</span>
+<span class="pc bpc" id="L198" title="2 of 4 branches missed.">        if (Intent.ACTION_PICK.equals(action) || Intent.ACTION_GET_CONTENT.equals(action)) {</span>
+            // The caller is waiting for us to return a note selected by
+            // the user.  The have clicked on one, so return it now.
+
+
+<span class="nc" id="L203">            setResult(RESULT_OK, new Intent().setData(noteUri));</span>
+        } else {
+            // Launch activity to view/edit the currently selected item
+<span class="fc" id="L206">            Intent intent = new Intent(Intent.ACTION_EDIT, noteUri);</span>
+<span class="fc" id="L207">            intent.addFlags(FLAG_ACTIVITY_NEW_TASK);</span>
+<span class="fc" id="L208">            startActivity(intent);</span>
+        }
+<span class="fc" id="L210">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

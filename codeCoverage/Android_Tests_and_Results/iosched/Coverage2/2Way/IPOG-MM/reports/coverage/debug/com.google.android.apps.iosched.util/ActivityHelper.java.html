@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ActivityHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.util</a> &gt; <span class="el_source">ActivityHelper.java</span></div><h1>ActivityHelper.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.util;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.ui.HomeActivity;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+/**
+ * A class that handles some common activity-related functionality in the app, such as setting up
+ * the action bar. This class provides functioanlity useful for both phones and tablets, and does
+ * not require any Android 3.0-specific features.
+ */
+public class ActivityHelper {
+    protected Activity mActivity;
+
+    /**
+     * Factory method for creating {@link ActivityHelper} objects for a given activity. Depending
+     * on which device the app is running, either a basic helper or Honeycomb-specific helper will
+     * be returned.
+     */
+    public static ActivityHelper createInstance(Activity activity) {
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        return UIUtils.isHoneycomb() ?</span>
+                new ActivityHelperHoneycomb(activity) :
+                new ActivityHelper(activity);
+    }
+
+<span class="fc" id="L56">    protected ActivityHelper(Activity activity) {</span>
+<span class="fc" id="L57">        mActivity = activity;</span>
+<span class="fc" id="L58">    }</span>
+
+    public void onPostCreate(Bundle savedInstanceState) {
+        // Create the action bar
+<span class="nc" id="L62">        SimpleMenu menu = new SimpleMenu(mActivity);</span>
+<span class="nc" id="L63">        mActivity.onCreatePanelMenu(Window.FEATURE_OPTIONS_PANEL, menu);</span>
+        // TODO: call onPreparePanelMenu here as well
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        for (int i = 0; i &lt; menu.size(); i++) {</span>
+<span class="nc" id="L66">            MenuItem item = menu.getItem(i);</span>
+<span class="nc" id="L67">            addActionButtonCompatFromMenuItem(item);</span>
+        }
+<span class="nc" id="L69">    }</span>
+
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="fc" id="L72">        mActivity.getMenuInflater().inflate(R.menu.default_menu_items, menu);</span>
+<span class="fc" id="L73">        return false;</span>
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        switch (item.getItemId()) {</span>
+            case R.id.menu_search:
+<span class="fc" id="L79">                goSearch();</span>
+<span class="fc" id="L80">                return true;</span>
+        }
+<span class="fc" id="L82">        return false;</span>
+    }
+
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if (keyCode == KeyEvent.KEYCODE_MENU) {</span>
+<span class="nc" id="L87">            return true;</span>
+        }
+<span class="fc" id="L89">        return false;</span>
+    }
+
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if (keyCode == KeyEvent.KEYCODE_BACK) {</span>
+<span class="nc" id="L94">            goHome();</span>
+<span class="nc" id="L95">            return true;</span>
+        }
+<span class="nc" id="L97">        return false;</span>
+    }
+
+    /**
+     * Method, to be called in &lt;code&gt;onPostCreate&lt;/code&gt;, that sets up this activity as the
+     * home activity for the app.
+     */
+    public void setupHomeActivity() {
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Method, to be called in &lt;code&gt;onPostCreate&lt;/code&gt;, that sets up this activity as a
+     * sub-activity in the app.
+     */
+    public void setupSubActivity() {
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Invoke &quot;home&quot; action, returning to {@link com.google.android.apps.iosched.ui.HomeActivity}.
+     */
+    public void goHome() {
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (mActivity instanceof HomeActivity) {</span>
+<span class="nc" id="L119">            return;</span>
+        }
+
+<span class="nc" id="L122">        final Intent intent = new Intent(mActivity, HomeActivity.class);</span>
+<span class="nc" id="L123">        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);</span>
+<span class="nc" id="L124">        mActivity.startActivity(intent);</span>
+
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (!UIUtils.isHoneycomb()) {</span>
+<span class="nc" id="L127">            mActivity.overridePendingTransition(R.anim.home_enter, R.anim.home_exit);</span>
+        }
+<span class="nc" id="L129">    }</span>
+
+    /**
+     * Invoke &quot;search&quot; action, triggering a default search.
+     */
+    public void goSearch() {
+<span class="fc" id="L135">        mActivity.startSearch(null, false, Bundle.EMPTY, false);</span>
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Sets up the action bar with the given title and accent color. If title is null, then
+     * the app logo will be shown instead of a title. Otherwise, a home button and title are
+     * visible. If color is null, then the default colorstrip is visible.
+     */
+    public void setupActionBar(CharSequence title, int color) {
+<span class="fc" id="L144">        final ViewGroup actionBarCompat = getActionBarCompat();</span>
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (actionBarCompat == null) {</span>
+<span class="fc" id="L146">            return;</span>
+        }
+
+<span class="nc" id="L149">        LinearLayout.LayoutParams springLayoutParams = new LinearLayout.LayoutParams(0,</span>
+                ViewGroup.LayoutParams.FILL_PARENT);
+<span class="nc" id="L151">        springLayoutParams.weight = 1;</span>
+
+<span class="nc" id="L153">        View.OnClickListener homeClickListener = new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L155">                goHome();</span>
+<span class="nc" id="L156">            }</span>
+        };
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (title != null) {</span>
+            // Add Home button
+<span class="nc" id="L161">            addActionButtonCompat(R.drawable.ic_title_home, R.string.description_home,</span>
+                    homeClickListener, true);
+
+            // Add title text
+<span class="nc" id="L165">            TextView titleText = new TextView(mActivity, null, R.attr.actionbarCompatTextStyle);</span>
+<span class="nc" id="L166">            titleText.setLayoutParams(springLayoutParams);</span>
+<span class="nc" id="L167">            titleText.setText(title);</span>
+<span class="nc" id="L168">            actionBarCompat.addView(titleText);</span>
+
+<span class="nc" id="L170">        } else {</span>
+            // Add logo
+<span class="nc" id="L172">            ImageButton logo = new ImageButton(mActivity, null, R.attr.actionbarCompatLogoStyle);</span>
+<span class="nc" id="L173">            logo.setOnClickListener(homeClickListener);</span>
+<span class="nc" id="L174">            actionBarCompat.addView(logo);</span>
+
+            // Add spring (dummy view to align future children to the right)
+<span class="nc" id="L177">            View spring = new View(mActivity);</span>
+<span class="nc" id="L178">            spring.setLayoutParams(springLayoutParams);</span>
+<span class="nc" id="L179">            actionBarCompat.addView(spring);</span>
+        }
+
+<span class="nc" id="L182">        setActionBarColor(color);</span>
+<span class="nc" id="L183">    }</span>
+
+    /**
+     * Sets the action bar color to the given color.
+     */
+    public void setActionBarColor(int color) {
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">        if (color == 0) {</span>
+<span class="nc" id="L190">            return;</span>
+        }
+
+<span class="fc" id="L193">        final View colorstrip = mActivity.findViewById(R.id.colorstrip);</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (colorstrip == null) {</span>
+<span class="nc" id="L195">            return;</span>
+        }
+
+<span class="fc" id="L198">        colorstrip.setBackgroundColor(color);</span>
+<span class="fc" id="L199">    }</span>
+
+    /**
+     * Sets the action bar title to the given string.
+     */
+    public void setActionBarTitle(CharSequence title) {
+<span class="nc" id="L205">        ViewGroup actionBar = getActionBarCompat();</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (actionBar == null) {</span>
+<span class="nc" id="L207">            return;</span>
+        }
+
+<span class="nc" id="L210">        TextView titleText = (TextView) actionBar.findViewById(R.id.actionbar_compat_text);</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (titleText != null) {</span>
+<span class="nc" id="L212">            titleText.setText(title);</span>
+        }
+<span class="nc" id="L214">    }</span>
+
+    /**
+     * Returns the {@link ViewGroup} for the action bar on phones (compatibility action bar).
+     * Can return null, and will return null on Honeycomb.
+     */
+    public ViewGroup getActionBarCompat() {
+<span class="fc" id="L221">        return (ViewGroup) mActivity.findViewById(R.id.actionbar_compat);</span>
+    }
+
+    /**
+     * Adds an action bar button to the compatibility action bar (on phones).
+     */
+    private View addActionButtonCompat(int iconResId, int textResId,
+            View.OnClickListener clickListener, boolean separatorAfter) {
+<span class="nc" id="L229">        final ViewGroup actionBar = getActionBarCompat();</span>
+<span class="nc bnc" id="L230" title="All 2 branches missed.">        if (actionBar == null) {</span>
+<span class="nc" id="L231">            return null;</span>
+        }
+
+        // Create the separator
+<span class="nc" id="L235">        ImageView separator = new ImageView(mActivity, null, R.attr.actionbarCompatSeparatorStyle);</span>
+<span class="nc" id="L236">        separator.setLayoutParams(</span>
+                new ViewGroup.LayoutParams(2, ViewGroup.LayoutParams.FILL_PARENT));
+
+        // Create the button
+<span class="nc" id="L240">        ImageButton actionButton = new ImageButton(mActivity, null,</span>
+                R.attr.actionbarCompatButtonStyle);
+<span class="nc" id="L242">        actionButton.setLayoutParams(new ViewGroup.LayoutParams(</span>
+<span class="nc" id="L243">                (int) mActivity.getResources().getDimension(R.dimen.actionbar_compat_height),</span>
+                ViewGroup.LayoutParams.FILL_PARENT));
+<span class="nc" id="L245">        actionButton.setImageResource(iconResId);</span>
+<span class="nc" id="L246">        actionButton.setScaleType(ImageView.ScaleType.CENTER);</span>
+<span class="nc" id="L247">        actionButton.setContentDescription(mActivity.getResources().getString(textResId));</span>
+<span class="nc" id="L248">        actionButton.setOnClickListener(clickListener);</span>
+
+        // Add separator and button to the action bar in the desired order
+
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (!separatorAfter) {</span>
+<span class="nc" id="L253">            actionBar.addView(separator);</span>
+        }
+
+<span class="nc" id="L256">        actionBar.addView(actionButton);</span>
+
+<span class="nc bnc" id="L258" title="All 2 branches missed.">        if (separatorAfter) {</span>
+<span class="nc" id="L259">            actionBar.addView(separator);</span>
+        }
+
+<span class="nc" id="L262">        return actionButton;</span>
+    }
+
+    /**
+     * Adds an action button to the compatibility action bar, using menu information from a
+     * {@link MenuItem}. If the menu item ID is &lt;code&gt;menu_refresh&lt;/code&gt;, the menu item's state
+     * can be changed to show a loading spinner using
+     * {@link ActivityHelper#setRefreshActionButtonCompatState(boolean)}.
+     */
+    private View addActionButtonCompatFromMenuItem(final MenuItem item) {
+<span class="nc" id="L272">        final ViewGroup actionBar = getActionBarCompat();</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        if (actionBar == null) {</span>
+<span class="nc" id="L274">            return null;</span>
+        }
+
+        // Create the separator
+<span class="nc" id="L278">        ImageView separator = new ImageView(mActivity, null, R.attr.actionbarCompatSeparatorStyle);</span>
+<span class="nc" id="L279">        separator.setLayoutParams(</span>
+                new ViewGroup.LayoutParams(2, ViewGroup.LayoutParams.FILL_PARENT));
+
+        // Create the button
+<span class="nc" id="L283">        ImageButton actionButton = new ImageButton(mActivity, null,</span>
+                R.attr.actionbarCompatButtonStyle);
+<span class="nc" id="L285">        actionButton.setId(item.getItemId());</span>
+<span class="nc" id="L286">        actionButton.setLayoutParams(new ViewGroup.LayoutParams(</span>
+<span class="nc" id="L287">                (int) mActivity.getResources().getDimension(R.dimen.actionbar_compat_height),</span>
+                ViewGroup.LayoutParams.FILL_PARENT));
+<span class="nc" id="L289">        actionButton.setImageDrawable(item.getIcon());</span>
+<span class="nc" id="L290">        actionButton.setScaleType(ImageView.ScaleType.CENTER);</span>
+<span class="nc" id="L291">        actionButton.setContentDescription(item.getTitle());</span>
+<span class="nc" id="L292">        actionButton.setOnClickListener(new View.OnClickListener() {</span>
+            public void onClick(View view) {
+<span class="nc" id="L294">                mActivity.onMenuItemSelected(Window.FEATURE_OPTIONS_PANEL, item);</span>
+<span class="nc" id="L295">            }</span>
+        });
+
+<span class="nc" id="L298">        actionBar.addView(separator);</span>
+<span class="nc" id="L299">        actionBar.addView(actionButton);</span>
+
+<span class="nc bnc" id="L301" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_refresh) {</span>
+            // Refresh buttons should be stateful, and allow for indeterminate progress indicators,
+            // so add those.
+<span class="nc" id="L304">            int buttonWidth = mActivity.getResources()</span>
+<span class="nc" id="L305">                    .getDimensionPixelSize(R.dimen.actionbar_compat_height);</span>
+<span class="nc" id="L306">            int buttonWidthDiv3 = buttonWidth / 3;</span>
+<span class="nc" id="L307">            ProgressBar indicator = new ProgressBar(mActivity, null,</span>
+                    R.attr.actionbarCompatProgressIndicatorStyle);
+<span class="nc" id="L309">            LinearLayout.LayoutParams indicatorLayoutParams = new LinearLayout.LayoutParams(</span>
+                    buttonWidthDiv3, buttonWidthDiv3);
+<span class="nc" id="L311">            indicatorLayoutParams.setMargins(buttonWidthDiv3, buttonWidthDiv3,</span>
+                    buttonWidth - 2 * buttonWidthDiv3, 0);
+<span class="nc" id="L313">            indicator.setLayoutParams(indicatorLayoutParams);</span>
+<span class="nc" id="L314">            indicator.setVisibility(View.GONE);</span>
+<span class="nc" id="L315">            indicator.setId(R.id.menu_refresh_progress);</span>
+<span class="nc" id="L316">            actionBar.addView(indicator);</span>
+        }
+
+<span class="nc" id="L319">        return actionButton;</span>
+    }
+
+    /**
+     * Sets the indeterminate loading state of a refresh button added with
+     * {@link ActivityHelper#addActionButtonCompatFromMenuItem(android.view.MenuItem)}
+     * (where the item ID was menu_refresh).
+     */
+    public void setRefreshActionButtonCompatState(boolean refreshing) {
+<span class="nc" id="L328">        View refreshButton = mActivity.findViewById(R.id.menu_refresh);</span>
+<span class="nc" id="L329">        View refreshIndicator = mActivity.findViewById(R.id.menu_refresh_progress);</span>
+
+<span class="nc bnc" id="L331" title="All 2 branches missed.">        if (refreshButton != null) {</span>
+<span class="nc bnc" id="L332" title="All 2 branches missed.">            refreshButton.setVisibility(refreshing ? View.GONE : View.VISIBLE);</span>
+        }
+<span class="nc bnc" id="L334" title="All 2 branches missed.">        if (refreshIndicator != null) {</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">            refreshIndicator.setVisibility(refreshing ? View.VISIBLE : View.GONE);</span>
+        }
+<span class="nc" id="L337">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

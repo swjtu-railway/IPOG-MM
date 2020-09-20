@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocalBlocksHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.io</a> &gt; <span class="el_source">LocalBlocksHandler.java</span></div><h1>LocalBlocksHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.io;
+
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.provider.ScheduleContract.Blocks;
+import com.google.android.apps.iosched.util.Lists;
+import com.google.android.apps.iosched.util.ParserUtils;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.END_TAG;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+import static org.xmlpull.v1.XmlPullParser.TEXT;
+
+public class LocalBlocksHandler extends XmlHandler {
+
+    public LocalBlocksHandler() {
+<span class="fc" id="L41">        super(ScheduleContract.CONTENT_AUTHORITY);</span>
+<span class="fc" id="L42">    }</span>
+
+    @Override
+    public ArrayList&lt;ContentProviderOperation&gt; parse(XmlPullParser parser, ContentResolver resolver)
+            throws XmlPullParserException, IOException {
+<span class="fc" id="L47">        final ArrayList&lt;ContentProviderOperation&gt; batch = Lists.newArrayList();</span>
+
+        // Clear any existing static blocks, as they may have been updated.
+<span class="fc" id="L50">        final String selection = Blocks.BLOCK_TYPE + &quot;=? OR &quot; + Blocks.BLOCK_TYPE +&quot;=?&quot;;</span>
+<span class="fc" id="L51">        final String[] selectionArgs = {</span>
+                ParserUtils.BLOCK_TYPE_FOOD,
+                ParserUtils.BLOCK_TYPE_OFFICE_HOURS
+        };
+<span class="fc" id="L55">        batch.add(ContentProviderOperation.newDelete(Blocks.CONTENT_URI)</span>
+<span class="fc" id="L56">                .withSelection(selection, selectionArgs).build());</span>
+
+        int type;
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        while ((type = parser.next()) != END_DOCUMENT) {</span>
+<span class="fc bfc" id="L60" title="All 4 branches covered.">            if (type == START_TAG &amp;&amp; Tags.BLOCK.equals(parser.getName())) {</span>
+<span class="fc" id="L61">                batch.add(parseBlock(parser));</span>
+            }
+        }
+
+<span class="fc" id="L65">        return batch;</span>
+    }
+
+    private static ContentProviderOperation parseBlock(XmlPullParser parser)
+            throws XmlPullParserException, IOException {
+<span class="fc" id="L70">        final int depth = parser.getDepth();</span>
+<span class="fc" id="L71">        final ContentProviderOperation.Builder builder = ContentProviderOperation</span>
+<span class="fc" id="L72">                .newInsert(Blocks.CONTENT_URI);</span>
+
+<span class="fc" id="L74">        String title = null;</span>
+<span class="fc" id="L75">        long startTime = -1;</span>
+<span class="fc" id="L76">        long endTime = -1;</span>
+<span class="fc" id="L77">        String blockType = null;</span>
+
+<span class="fc" id="L79">        String tag = null;</span>
+        int type;
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        while (((type = parser.next()) != END_TAG ||</span>
+<span class="pc bpc" id="L82" title="1 of 4 branches missed.">                parser.getDepth() &gt; depth) &amp;&amp; type != END_DOCUMENT) {</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (type == START_TAG) {</span>
+<span class="fc" id="L84">                tag = parser.getName();</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">            } else if (type == END_TAG) {</span>
+<span class="fc" id="L86">                tag = null;</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">            } else if (type == TEXT) {</span>
+<span class="fc" id="L88">                final String text = parser.getText();</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">                if (Tags.TITLE.equals(tag)) {</span>
+<span class="fc" id="L90">                    title = text;</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">                } else if (Tags.START.equals(tag)) {</span>
+<span class="fc" id="L92">                    startTime = ParserUtils.parseTime(text);</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">                } else if (Tags.END.equals(tag)) {</span>
+<span class="fc" id="L94">                    endTime = ParserUtils.parseTime(text);</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">                } else if (Tags.TYPE.equals(tag)) {</span>
+<span class="fc" id="L96">                    blockType = text;</span>
+                }
+<span class="fc" id="L98">            }</span>
+        }
+
+<span class="fc" id="L101">        final String blockId = Blocks.generateBlockId(startTime, endTime);</span>
+
+<span class="fc" id="L103">        builder.withValue(Blocks.BLOCK_ID, blockId);</span>
+<span class="fc" id="L104">        builder.withValue(Blocks.BLOCK_TITLE, title);</span>
+<span class="fc" id="L105">        builder.withValue(Blocks.BLOCK_START, startTime);</span>
+<span class="fc" id="L106">        builder.withValue(Blocks.BLOCK_END, endTime);</span>
+<span class="fc" id="L107">        builder.withValue(Blocks.BLOCK_TYPE, blockType);</span>
+
+<span class="fc" id="L109">        return builder.build();</span>
+    }
+
+    interface Tags {
+        String BLOCK = &quot;block&quot;;
+        String TITLE = &quot;title&quot;;
+        String START = &quot;start&quot;;
+        String END = &quot;end&quot;;
+        String TYPE = &quot;type&quot;;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

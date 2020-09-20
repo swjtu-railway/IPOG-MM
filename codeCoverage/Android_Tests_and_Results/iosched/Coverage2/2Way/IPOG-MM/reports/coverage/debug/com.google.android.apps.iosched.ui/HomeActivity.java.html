@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HomeActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">HomeActivity.java</span></div><h1>HomeActivity.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.service.SyncService;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.DetachableResultReceiver;
+import com.google.android.apps.iosched.util.EulaHelper;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
+
+/**
+ * Front-door {@link Activity} that displays high-level features the schedule application offers to
+ * users. Depending on whether the device is a phone or an Android 3.0+ tablet, different layouts
+ * will be used. For example, on a phone, the primary content is a {@link DashboardFragment},
+ * whereas on a tablet, both a {@link DashboardFragment} and a {@link TagStreamFragment} are
+ * displayed.
+ */
+<span class="fc" id="L42">public class HomeActivity extends BaseActivity {</span>
+    private static final String TAG = &quot;HomeActivity&quot;;
+
+    private TagStreamFragment mTagStreamFragment;
+    private SyncStatusUpdaterFragment mSyncStatusUpdaterFragment;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L50">        super.onCreate(savedInstanceState);</span>
+
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (!EulaHelper.hasAcceptedEula(this)) {</span>
+<span class="fc" id="L53">            EulaHelper.showEula(false, this);</span>
+        }
+
+<span class="fc" id="L56">        AnalyticsUtils.getInstance(this).trackPageView(&quot;/Home&quot;);</span>
+
+<span class="fc" id="L58">        setContentView(R.layout.activity_home);</span>
+<span class="fc" id="L59">        getActivityHelper().setupActionBar(null, 0);</span>
+
+<span class="fc" id="L61">        FragmentManager fm = getSupportFragmentManager();</span>
+
+<span class="fc" id="L63">        mTagStreamFragment = (TagStreamFragment) fm.findFragmentById(R.id.fragment_tag_stream);</span>
+
+<span class="fc" id="L65">        mSyncStatusUpdaterFragment = (SyncStatusUpdaterFragment) fm</span>
+<span class="fc" id="L66">                .findFragmentByTag(SyncStatusUpdaterFragment.TAG);</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (mSyncStatusUpdaterFragment == null) {</span>
+<span class="fc" id="L68">            mSyncStatusUpdaterFragment = new SyncStatusUpdaterFragment();</span>
+<span class="fc" id="L69">            fm.beginTransaction().add(mSyncStatusUpdaterFragment,</span>
+<span class="fc" id="L70">                    SyncStatusUpdaterFragment.TAG).commit();</span>
+
+<span class="fc" id="L72">            triggerRefresh();</span>
+        }
+<span class="fc" id="L74">    }</span>
+
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+<span class="fc" id="L79">        super.onPostCreate(savedInstanceState);</span>
+<span class="fc" id="L80">        getActivityHelper().setupHomeActivity();</span>
+<span class="fc" id="L81">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+<span class="fc" id="L85">        getMenuInflater().inflate(R.menu.refresh_menu_items, menu);</span>
+<span class="fc" id="L86">        super.onCreateOptionsMenu(menu);</span>
+<span class="fc" id="L87">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_refresh) {</span>
+<span class="nc" id="L93">            triggerRefresh();</span>
+<span class="nc" id="L94">            return true;</span>
+        }
+<span class="nc" id="L96">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    private void triggerRefresh() {
+<span class="fc" id="L100">        final Intent intent = new Intent(Intent.ACTION_SYNC, null, this, SyncService.class);</span>
+<span class="fc" id="L101">        intent.putExtra(SyncService.EXTRA_STATUS_RECEIVER, mSyncStatusUpdaterFragment.mReceiver);</span>
+<span class="fc" id="L102">        startService(intent);</span>
+
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">        if (mTagStreamFragment != null) {</span>
+<span class="nc" id="L105">            mTagStreamFragment.refresh();</span>
+        }
+<span class="fc" id="L107">    }</span>
+
+    private void updateRefreshStatus(boolean refreshing) {
+<span class="fc" id="L110">        getActivityHelper().setRefreshActionButtonCompatState(refreshing);</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * A non-UI fragment, retained across configuration changes, that updates its activity's UI
+     * when sync status changes.
+     */
+<span class="fc" id="L117">    public static class SyncStatusUpdaterFragment extends Fragment</span>
+            implements DetachableResultReceiver.Receiver {
+<span class="fc" id="L119">        public static final String TAG = SyncStatusUpdaterFragment.class.getName();</span>
+
+<span class="fc" id="L121">        private boolean mSyncing = false;</span>
+        private DetachableResultReceiver mReceiver;
+
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L126">            super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L127">            setRetainInstance(true);</span>
+<span class="fc" id="L128">            mReceiver = new DetachableResultReceiver(new Handler());</span>
+<span class="fc" id="L129">            mReceiver.setReceiver(this);</span>
+<span class="fc" id="L130">        }</span>
+
+        /** {@inheritDoc} */
+        public void onReceiveResult(int resultCode, Bundle resultData) {
+<span class="nc" id="L134">            HomeActivity activity = (HomeActivity) getActivity();</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            if (activity == null) {</span>
+<span class="nc" id="L136">                return;</span>
+            }
+
+<span class="nc bnc" id="L139" title="All 4 branches missed.">            switch (resultCode) {</span>
+                case SyncService.STATUS_RUNNING: {
+<span class="nc" id="L141">                    mSyncing = true;</span>
+<span class="nc" id="L142">                    break;</span>
+                }
+                case SyncService.STATUS_FINISHED: {
+<span class="nc" id="L145">                    mSyncing = false;</span>
+<span class="nc" id="L146">                    break;</span>
+                }
+                case SyncService.STATUS_ERROR: {
+                    // Error happened down in SyncService, show as toast.
+<span class="nc" id="L150">                    mSyncing = false;</span>
+<span class="nc" id="L151">                    final String errorText = getString(R.string.toast_sync_error, resultData</span>
+<span class="nc" id="L152">                            .getString(Intent.EXTRA_TEXT));</span>
+<span class="nc" id="L153">                    Toast.makeText(activity, errorText, Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L154">                    break;</span>
+                }
+            }
+
+<span class="nc" id="L158">            activity.updateRefreshStatus(mSyncing);</span>
+<span class="nc" id="L159">        }</span>
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+<span class="fc" id="L163">            super.onActivityCreated(savedInstanceState);</span>
+<span class="fc" id="L164">            ((HomeActivity) getActivity()).updateRefreshStatus(mSyncing);</span>
+<span class="fc" id="L165">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

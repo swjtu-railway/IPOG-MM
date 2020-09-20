@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RemoteSpeakersHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.io</a> &gt; <span class="el_source">RemoteSpeakersHandler.java</span></div><h1>RemoteSpeakersHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.io;
+
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.provider.ScheduleContract.Speakers;
+import com.google.android.apps.iosched.provider.ScheduleContract.SyncColumns;
+import com.google.android.apps.iosched.util.Lists;
+import com.google.android.apps.iosched.util.SpreadsheetEntry;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
+import android.net.Uri;
+import android.util.Log;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import static com.google.android.apps.iosched.util.ParserUtils.AtomTags.ENTRY;
+import static com.google.android.apps.iosched.util.ParserUtils.queryItemUpdated;
+import static com.google.android.apps.iosched.util.ParserUtils.sanitizeId;
+import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
+import static org.xmlpull.v1.XmlPullParser.START_TAG;
+
+/**
+ * Handle a remote {@link XmlPullParser} that defines a set of {@link Speakers}
+ * entries. Assumes that the remote source is a Google Spreadsheet.
+ */
+public class RemoteSpeakersHandler extends XmlHandler {
+    private static final String TAG = &quot;SpeakersHandler&quot;;
+
+    public RemoteSpeakersHandler() {
+<span class="nc" id="L50">        super(ScheduleContract.CONTENT_AUTHORITY);</span>
+<span class="nc" id="L51">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public ArrayList&lt;ContentProviderOperation&gt; parse(XmlPullParser parser, ContentResolver resolver)
+            throws XmlPullParserException, IOException {
+<span class="nc" id="L57">        final ArrayList&lt;ContentProviderOperation&gt; batch = Lists.newArrayList();</span>
+
+        // Walk document, parsing any incoming entries
+        int type;
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        while ((type = parser.next()) != END_DOCUMENT) {</span>
+<span class="nc bnc" id="L62" title="All 4 branches missed.">            if (type == START_TAG &amp;&amp; ENTRY.equals(parser.getName())) {</span>
+                // Process single spreadsheet row at a time
+<span class="nc" id="L64">                final SpreadsheetEntry entry = SpreadsheetEntry.fromParser(parser);</span>
+
+<span class="nc" id="L66">                final String speakerId = sanitizeId(entry.get(Columns.SPEAKER_TITLE), true);</span>
+<span class="nc" id="L67">                final Uri speakerUri = Speakers.buildSpeakerUri(speakerId);</span>
+
+                // Check for existing details, only update when changed
+<span class="nc" id="L70">                final long localUpdated = queryItemUpdated(speakerUri, resolver);</span>
+<span class="nc" id="L71">                final long serverUpdated = entry.getUpdated();</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">                if (Log.isLoggable(TAG, Log.VERBOSE)) {</span>
+<span class="nc" id="L73">                    Log.v(TAG, &quot;found speaker &quot; + entry.toString());</span>
+<span class="nc" id="L74">                    Log.v(TAG, &quot;found localUpdated=&quot; + localUpdated + &quot;, server=&quot; + serverUpdated);</span>
+                }
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                if (localUpdated &gt;= serverUpdated) continue;</span>
+
+                // Clear any existing values for this speaker, treating the
+                // incoming details as authoritative.
+<span class="nc" id="L80">                batch.add(ContentProviderOperation.newDelete(speakerUri).build());</span>
+
+<span class="nc" id="L82">                final ContentProviderOperation.Builder builder = ContentProviderOperation</span>
+<span class="nc" id="L83">                        .newInsert(Speakers.CONTENT_URI);</span>
+
+<span class="nc" id="L85">                builder.withValue(SyncColumns.UPDATED, serverUpdated);</span>
+<span class="nc" id="L86">                builder.withValue(Speakers.SPEAKER_ID, speakerId);</span>
+<span class="nc" id="L87">                builder.withValue(Speakers.SPEAKER_NAME, entry.get(Columns.SPEAKER_TITLE));</span>
+<span class="nc" id="L88">                builder.withValue(Speakers.SPEAKER_IMAGE_URL, entry.get(Columns.SPEAKER_IMAGE_URL));</span>
+<span class="nc" id="L89">                builder.withValue(Speakers.SPEAKER_COMPANY, entry.get(Columns.SPEAKER_COMPANY));</span>
+<span class="nc" id="L90">                builder.withValue(Speakers.SPEAKER_ABSTRACT, entry.get(Columns.SPEAKER_ABSTRACT));</span>
+<span class="nc" id="L91">                builder.withValue(Speakers.SPEAKER_URL, entry.get(Columns.SPEAKER_URL));</span>
+
+                // Normal speaker details ready, write to provider
+<span class="nc" id="L94">                batch.add(builder.build());</span>
+<span class="nc" id="L95">            }</span>
+        }
+
+<span class="nc" id="L98">        return batch;</span>
+    }
+
+    /** Columns coming from remote spreadsheet. */
+    private interface Columns {
+        String SPEAKER_TITLE = &quot;speakertitle&quot;;
+        String SPEAKER_IMAGE_URL = &quot;speakerimageurl&quot;;
+        String SPEAKER_COMPANY = &quot;speakercompany&quot;;
+        String SPEAKER_ABSTRACT = &quot;speakerabstract&quot;;
+        String SPEAKER_URL = &quot;speakerurl&quot;;
+
+        // speaker_title: Aaron Koblin
+        // speaker_image_url: http://path/to/image.png
+        // speaker_company: Google
+        // speaker_abstract: Aaron takes social and infrastructural data and uses...
+        // speaker_url: http://profiles.google.com/...
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

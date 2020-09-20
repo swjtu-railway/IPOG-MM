@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotePadProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.example.android.notepad</a> &gt; <span class="el_source">NotePadProvider.java</span></div><h1>NotePadProvider.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.example.android.notepad;
+
+import com.example.android.notepad.NotePad.NoteColumns;
+
+import android.content.ContentProvider;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.UriMatcher;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteQueryBuilder;
+import android.net.Uri;
+import android.provider.BaseColumns;
+import android.provider.LiveFolders;
+import android.text.TextUtils;
+import android.util.Log;
+
+import java.util.HashMap;
+
+/**
+ * Provides access to a database of notes. Each note has a title, the note
+ * itself, a creation date and a modified data.
+ */
+<span class="fc" id="L44">public class NotePadProvider extends ContentProvider {</span>
+
+    private static final String TAG = &quot;NotePadProvider&quot;;
+
+    private static final String DATABASE_NAME = &quot;notepad.db&quot;;
+    private static final int DATABASE_VERSION = 2;
+    private static final String NOTES_TABLE_NAME = &quot;notes&quot;;
+
+    private static HashMap&lt;String, String&gt; sNotesProjectionMap;
+    private static HashMap&lt;String, String&gt; sLiveFolderProjectionMap;
+
+    private static final int NOTES = 1;
+    private static final int NOTE_ID = 2;
+    private static final int LIVE_FOLDER_NOTES = 3;
+
+    private static final UriMatcher sUriMatcher;
+
+    /**
+     * This class helps open, create, and upgrade the database file.
+     */
+    private static class DatabaseHelper extends SQLiteOpenHelper {
+
+        DatabaseHelper(Context context) {
+<span class="fc" id="L67">            super(context, DATABASE_NAME, null, DATABASE_VERSION);</span>
+<span class="fc" id="L68">        }</span>
+
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+<span class="fc" id="L72">            db.execSQL(&quot;CREATE TABLE &quot; + NOTES_TABLE_NAME + &quot; (&quot;</span>
+                    + BaseColumns._ID + &quot; INTEGER PRIMARY KEY,&quot;
+                    + NoteColumns.TITLE + &quot; TEXT,&quot;
+                    + NoteColumns.NOTE + &quot; TEXT,&quot;
+                    + NoteColumns.CREATED_DATE + &quot; INTEGER,&quot;
+                    + NoteColumns.MODIFIED_DATE + &quot; INTEGER&quot;
+                    + &quot;);&quot;);
+<span class="fc" id="L79">        }</span>
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+<span class="nc" id="L83">            Log.w(TAG, &quot;Upgrading database from version &quot; + oldVersion + &quot; to &quot;</span>
+                    + newVersion + &quot;, which will destroy all old data&quot;);
+<span class="nc" id="L85">            db.execSQL(&quot;DROP TABLE IF EXISTS notes&quot;);</span>
+<span class="nc" id="L86">            onCreate(db);</span>
+<span class="nc" id="L87">        }</span>
+    }
+
+    private DatabaseHelper mOpenHelper;
+
+    @Override
+    public boolean onCreate() {
+<span class="fc" id="L94">        mOpenHelper = new DatabaseHelper(getContext());</span>
+<span class="fc" id="L95">        return true;</span>
+    }
+
+    @Override
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
+            String sortOrder) {
+<span class="fc" id="L101">        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();</span>
+<span class="fc" id="L102">        qb.setTables(NOTES_TABLE_NAME);</span>
+
+<span class="pc bpc" id="L104" title="2 of 4 branches missed.">        switch (sUriMatcher.match(uri)) {</span>
+        case NOTES:
+<span class="fc" id="L106">            qb.setProjectionMap(sNotesProjectionMap);</span>
+<span class="fc" id="L107">            break;</span>
+
+        case NOTE_ID:
+<span class="fc" id="L110">            qb.setProjectionMap(sNotesProjectionMap);</span>
+<span class="fc" id="L111">            qb.appendWhere(BaseColumns._ID + &quot;=&quot; + uri.getPathSegments().get(1));</span>
+<span class="fc" id="L112">            break;</span>
+
+        case LIVE_FOLDER_NOTES:
+<span class="nc" id="L115">            qb.setProjectionMap(sLiveFolderProjectionMap);</span>
+<span class="nc" id="L116">            break;</span>
+
+        default:
+<span class="nc" id="L119">            throw new IllegalArgumentException(&quot;Unknown URI &quot; + uri);</span>
+        }
+
+        // If no sort order is specified use the default
+        String orderBy;
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (TextUtils.isEmpty(sortOrder)) {</span>
+<span class="fc" id="L125">            orderBy = NoteColumns.DEFAULT_SORT_ORDER;</span>
+        } else {
+<span class="fc" id="L127">            orderBy = sortOrder;</span>
+        }
+
+        // Get the database and run the query
+<span class="fc" id="L131">        SQLiteDatabase db = mOpenHelper.getReadableDatabase();</span>
+<span class="fc" id="L132">        Cursor c = qb.query(db, projection, selection, selectionArgs, null, null, orderBy);</span>
+
+        // Tell the cursor what uri to watch, so it knows when its source data changes
+<span class="fc" id="L135">        c.setNotificationUri(getContext().getContentResolver(), uri);</span>
+<span class="fc" id="L136">        return c;</span>
+    }
+
+    @Override
+    public String getType(Uri uri) {
+<span class="pc bpc" id="L141" title="1 of 3 branches missed.">        switch (sUriMatcher.match(uri)) {</span>
+        case NOTES:
+        case LIVE_FOLDER_NOTES:
+<span class="fc" id="L144">            return NoteColumns.CONTENT_TYPE;</span>
+
+        case NOTE_ID:
+<span class="fc" id="L147">            return NoteColumns.CONTENT_ITEM_TYPE;</span>
+
+        default:
+<span class="nc" id="L150">            throw new IllegalArgumentException(&quot;Unknown URI &quot; + uri);</span>
+        }
+    }
+
+    @Override
+    public Uri insert(Uri uri, ContentValues initialValues) {
+        // Validate the requested uri
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">        if (sUriMatcher.match(uri) != NOTES) {</span>
+<span class="nc" id="L158">            throw new IllegalArgumentException(&quot;Unknown URI &quot; + uri);</span>
+        }
+
+        ContentValues values;
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">        if (initialValues != null) {</span>
+<span class="nc" id="L163">            values = new ContentValues(initialValues);</span>
+        } else {
+<span class="fc" id="L165">            values = new ContentValues();</span>
+        }
+
+<span class="fc" id="L168">        Long now = Long.valueOf(System.currentTimeMillis());</span>
+
+        // Make sure that the fields are all set
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">        if (values.containsKey(NoteColumns.CREATED_DATE) == false) {</span>
+<span class="fc" id="L172">            values.put(NoteColumns.CREATED_DATE, now);</span>
+        }
+
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">        if (values.containsKey(NoteColumns.MODIFIED_DATE) == false) {</span>
+<span class="fc" id="L176">            values.put(NoteColumns.MODIFIED_DATE, now);</span>
+        }
+
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (values.containsKey(NoteColumns.TITLE) == false) {</span>
+<span class="fc" id="L180">            Resources r = Resources.getSystem();</span>
+<span class="fc" id="L181">            values.put(NoteColumns.TITLE, r.getString(android.R.string.untitled));</span>
+        }
+
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        if (values.containsKey(NoteColumns.NOTE) == false) {</span>
+<span class="fc" id="L185">            values.put(NoteColumns.NOTE, &quot;&quot;);</span>
+        }
+
+<span class="fc" id="L188">        SQLiteDatabase db = mOpenHelper.getWritableDatabase();</span>
+<span class="fc" id="L189">        long rowId = db.insert(NOTES_TABLE_NAME, NoteColumns.NOTE, values);</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        if (rowId &gt; 0) {</span>
+<span class="fc" id="L191">            Uri noteUri = ContentUris.withAppendedId(NoteColumns.CONTENT_URI, rowId);</span>
+<span class="fc" id="L192">            getContext().getContentResolver().notifyChange(noteUri, null);</span>
+<span class="fc" id="L193">            return noteUri;</span>
+        }
+
+<span class="nc" id="L196">        throw new SQLException(&quot;Failed to insert row into &quot; + uri);</span>
+    }
+
+    @Override
+    public int delete(Uri uri, String where, String[] whereArgs) {
+<span class="fc" id="L201">        SQLiteDatabase db = mOpenHelper.getWritableDatabase();</span>
+        int count;
+<span class="pc bpc" id="L203" title="2 of 3 branches missed.">        switch (sUriMatcher.match(uri)) {</span>
+        case NOTES:
+<span class="nc" id="L205">            count = db.delete(NOTES_TABLE_NAME, where, whereArgs);</span>
+<span class="nc" id="L206">            break;</span>
+
+        case NOTE_ID:
+<span class="fc" id="L209">            String noteId = uri.getPathSegments().get(1);</span>
+<span class="fc" id="L210">            count = db.delete(NOTES_TABLE_NAME, BaseColumns._ID + &quot;=&quot; + noteId</span>
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">                    + (!TextUtils.isEmpty(where) ? &quot; AND (&quot; + where + ')' : &quot;&quot;), whereArgs);</span>
+<span class="fc" id="L212">            break;</span>
+
+        default:
+<span class="nc" id="L215">            throw new IllegalArgumentException(&quot;Unknown URI &quot; + uri);</span>
+        }
+
+<span class="fc" id="L218">        getContext().getContentResolver().notifyChange(uri, null);</span>
+<span class="fc" id="L219">        return count;</span>
+    }
+
+    @Override
+    public int update(Uri uri, ContentValues values, String where, String[] whereArgs) {
+<span class="fc" id="L224">        SQLiteDatabase db = mOpenHelper.getWritableDatabase();</span>
+        int count;
+<span class="pc bpc" id="L226" title="2 of 3 branches missed.">        switch (sUriMatcher.match(uri)) {</span>
+        case NOTES:
+<span class="nc" id="L228">            count = db.update(NOTES_TABLE_NAME, values, where, whereArgs);</span>
+<span class="nc" id="L229">            break;</span>
+
+        case NOTE_ID:
+<span class="fc" id="L232">            String noteId = uri.getPathSegments().get(1);</span>
+<span class="fc" id="L233">            count = db.update(NOTES_TABLE_NAME, values, BaseColumns._ID + &quot;=&quot; + noteId</span>
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">                    + (!TextUtils.isEmpty(where) ? &quot; AND (&quot; + where + ')' : &quot;&quot;), whereArgs);</span>
+<span class="fc" id="L235">            break;</span>
+
+        default:
+<span class="nc" id="L238">            throw new IllegalArgumentException(&quot;Unknown URI &quot; + uri);</span>
+        }
+
+<span class="fc" id="L241">        getContext().getContentResolver().notifyChange(uri, null);</span>
+<span class="fc" id="L242">        return count;</span>
+    }
+
+    static {
+<span class="fc" id="L246">        sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);</span>
+<span class="fc" id="L247">        sUriMatcher.addURI(NotePad.AUTHORITY, &quot;notes&quot;, NOTES);</span>
+<span class="fc" id="L248">        sUriMatcher.addURI(NotePad.AUTHORITY, &quot;notes/#&quot;, NOTE_ID);</span>
+<span class="fc" id="L249">        sUriMatcher.addURI(NotePad.AUTHORITY, &quot;live_folders/notes&quot;, LIVE_FOLDER_NOTES);</span>
+
+<span class="fc" id="L251">        sNotesProjectionMap = new HashMap&lt;String, String&gt;();</span>
+<span class="fc" id="L252">        sNotesProjectionMap.put(BaseColumns._ID, BaseColumns._ID);</span>
+<span class="fc" id="L253">        sNotesProjectionMap.put(NoteColumns.TITLE, NoteColumns.TITLE);</span>
+<span class="fc" id="L254">        sNotesProjectionMap.put(NoteColumns.NOTE, NoteColumns.NOTE);</span>
+<span class="fc" id="L255">        sNotesProjectionMap.put(NoteColumns.CREATED_DATE, NoteColumns.CREATED_DATE);</span>
+<span class="fc" id="L256">        sNotesProjectionMap.put(NoteColumns.MODIFIED_DATE, NoteColumns.MODIFIED_DATE);</span>
+
+        // Support for Live Folders.
+<span class="fc" id="L259">        sLiveFolderProjectionMap = new HashMap&lt;String, String&gt;();</span>
+<span class="fc" id="L260">        sLiveFolderProjectionMap.put(BaseColumns._ID, BaseColumns._ID + &quot; AS &quot; +</span>
+                BaseColumns._ID);
+<span class="fc" id="L262">        sLiveFolderProjectionMap.put(LiveFolders.NAME, NoteColumns.TITLE + &quot; AS &quot; +</span>
+                LiveFolders.NAME);
+        // Add more columns here for more robust Live Folders.
+<span class="fc" id="L265">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

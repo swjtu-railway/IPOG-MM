@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MapFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">MapFragment.java</span></div><h1>MapFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.provider.ScheduleContract.Rooms;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.ParserUtils;
+
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.fragment.app.Fragment;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.Toast;
+
+/**
+ * Shows a {@link WebView} with a map of the conference venue.
+ */
+<span class="fc" id="L45">public class MapFragment extends Fragment {</span>
+    private static final String TAG = &quot;MapFragment&quot;;
+
+    /**
+     * When specified, will automatically point the map to the requested room.
+     */
+    public static final String EXTRA_ROOM = &quot;com.google.android.iosched.extra.ROOM&quot;;
+
+    private static final String MAP_JSI_NAME = &quot;MAP_CONTAINER&quot;;
+    private static final String MAP_URL = &quot;http://www.google.com/events/io/2011/embed.html&quot;;
+<span class="fc" id="L55">    private static boolean CLEAR_CACHE_ON_LOAD = false;</span>
+
+    private WebView mWebView;
+    private View mLoadingSpinner;
+<span class="fc" id="L59">    private boolean mMapInitialized = false;</span>
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L63">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L64">        setHasOptionsMenu(true);</span>
+<span class="fc" id="L65">        AnalyticsUtils.getInstance(getActivity()).trackPageView(&quot;/Map&quot;);</span>
+<span class="fc" id="L66">    }</span>
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+
+<span class="fc" id="L72">        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_webview_with_spinner, null);</span>
+
+        // For some reason, if we omit this, NoSaveStateFrameLayout thinks we are
+        // FILL_PARENT / WRAP_CONTENT, making the progress bar stick to the top of the activity.
+<span class="fc" id="L76">        root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,</span>
+                ViewGroup.LayoutParams.FILL_PARENT));
+
+<span class="fc" id="L79">        mLoadingSpinner = root.findViewById(R.id.loading_spinner);</span>
+<span class="fc" id="L80">        mWebView = (WebView) root.findViewById(R.id.webview);</span>
+<span class="fc" id="L81">        mWebView.setWebChromeClient(mWebChromeClient);</span>
+<span class="fc" id="L82">        mWebView.setWebViewClient(mWebViewClient);</span>
+
+<span class="fc" id="L84">        mWebView.post(new Runnable() {</span>
+            public void run() {
+                // Initialize web view
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">                if (CLEAR_CACHE_ON_LOAD) {</span>
+<span class="nc" id="L88">                    mWebView.clearCache(true);</span>
+                }
+
+<span class="fc" id="L91">                mWebView.getSettings().setJavaScriptEnabled(true);</span>
+<span class="fc" id="L92">                mWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);</span>
+<span class="fc" id="L93">                mWebView.loadUrl(MAP_URL);</span>
+//                mWebView.addJavascriptInterface(mMapJsiImpl, MAP_JSI_NAME);
+<span class="fc" id="L95">            }</span>
+        });
+
+<span class="fc" id="L98">        return root;</span>
+    }
+
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+<span class="fc" id="L104">        super.onCreateOptionsMenu(menu, inflater);</span>
+<span class="fc" id="L105">        inflater.inflate(R.menu.refresh_menu_items, menu);</span>
+<span class="fc" id="L106">    }</span>
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        if (item.getItemId() == R.id.menu_refresh) {</span>
+<span class="nc" id="L111">            mWebView.reload();</span>
+<span class="nc" id="L112">            return true;</span>
+        }
+<span class="nc" id="L114">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    private void runJs(String js) {
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (Log.isLoggable(TAG, Log.DEBUG)) {</span>
+<span class="nc" id="L119">            Log.d(TAG, &quot;Loading javascript:&quot; + js);</span>
+        }
+<span class="nc" id="L121">        mWebView.loadUrl(&quot;javascript:&quot; + js);</span>
+<span class="nc" id="L122">    }</span>
+
+    /**
+     * Helper method to escape JavaScript strings. Useful when passing strings to a WebView via
+     * &quot;javascript:&quot; calls.
+     */
+    private static String escapeJsString(String s) {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (s == null) {</span>
+<span class="nc" id="L130">            return &quot;&quot;;</span>
+        }
+
+<span class="nc" id="L133">        return s.replace(&quot;'&quot;, &quot;\\'&quot;).replace(&quot;\&quot;&quot;, &quot;\\\&quot;&quot;);</span>
+    }
+
+    public void panLeft(float screenFraction) {
+<span class="nc" id="L137">        runJs(&quot;IoMap.panLeft('&quot; + screenFraction + &quot;');&quot;);</span>
+<span class="nc" id="L138">    }</span>
+
+    /**
+     * I/O Conference Map JavaScript interface.
+     */
+    private interface MapJsi {
+        void openContentInfo(String test);
+        void onMapReady();
+    }
+
+<span class="fc" id="L148">    private WebChromeClient mWebChromeClient = new WebChromeClient() {</span>
+        public void onConsoleMessage(String message, int lineNumber, String sourceID) {
+<span class="nc" id="L150">            Log.i(TAG, &quot;JS Console message: (&quot; + sourceID + &quot;: &quot; + lineNumber + &quot;) &quot; + message);</span>
+<span class="nc" id="L151">        }</span>
+    };
+
+<span class="fc" id="L154">    private WebViewClient mWebViewClient = new WebViewClient() {</span>
+        @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+<span class="fc" id="L157">            super.onPageStarted(view, url, favicon);</span>
+<span class="fc" id="L158">            mLoadingSpinner.setVisibility(View.VISIBLE);</span>
+<span class="fc" id="L159">            mWebView.setVisibility(View.INVISIBLE);</span>
+<span class="fc" id="L160">        }</span>
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+<span class="nc" id="L164">            super.onPageFinished(view, url);</span>
+<span class="nc" id="L165">            mLoadingSpinner.setVisibility(View.GONE);</span>
+<span class="nc" id="L166">            mWebView.setVisibility(View.VISIBLE);</span>
+<span class="nc" id="L167">        }</span>
+
+        @Override
+        public void onReceivedError(WebView view, int errorCode, String description,
+                String failingUrl) {
+<span class="nc" id="L172">            Log.e(TAG, &quot;Error &quot; + errorCode + &quot;: &quot; + description);</span>
+<span class="nc" id="L173">            Toast.makeText(view.getContext(), &quot;Error &quot; + errorCode + &quot;: &quot; + description,</span>
+<span class="nc" id="L174">                    Toast.LENGTH_LONG).show();</span>
+<span class="nc" id="L175">            super.onReceivedError(view, errorCode, description, failingUrl);</span>
+<span class="nc" id="L176">        }</span>
+    };
+
+<span class="fc" id="L179">    private MapJsi mMapJsiImpl = new MapJsi() {</span>
+        public void openContentInfo(String roomId) {
+<span class="nc" id="L181">            final String possibleTrackId = ParserUtils.translateTrackIdAlias(roomId);</span>
+            final Intent intent;
+<span class="nc bnc" id="L183" title="All 2 branches missed.">            if (ParserUtils.LOCAL_TRACK_IDS.contains(possibleTrackId)) {</span>
+                // This is a track; open up the sandbox for the track, since room IDs that are
+                // track IDs are sandbox areas in the map.
+<span class="nc" id="L186">                Uri trackVendorsUri = ScheduleContract.Tracks.buildVendorsUri(possibleTrackId);</span>
+<span class="nc" id="L187">                intent = new Intent(Intent.ACTION_VIEW, trackVendorsUri);</span>
+<span class="nc" id="L188">            } else {</span>
+<span class="nc" id="L189">                Uri roomUri = Rooms.buildSessionsDirUri(roomId);</span>
+<span class="nc" id="L190">                intent = new Intent(Intent.ACTION_VIEW, roomUri);</span>
+            }
+<span class="nc" id="L192">            getActivity().runOnUiThread(new Runnable() {</span>
+                public void run() {
+<span class="nc" id="L194">                    ((BaseActivity) getActivity()).openActivityOrFragment(intent);</span>
+<span class="nc" id="L195">                }</span>
+            });
+<span class="nc" id="L197">        }</span>
+
+        public void onMapReady() {
+<span class="nc bnc" id="L200" title="All 2 branches missed.">            if (Log.isLoggable(TAG, Log.DEBUG)) {</span>
+<span class="nc" id="L201">                Log.d(TAG, &quot;onMapReady&quot;);</span>
+            }
+
+<span class="nc" id="L204">            final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());</span>
+
+<span class="nc" id="L206">            String showRoomId = null;</span>
+<span class="nc bnc" id="L207" title="All 4 branches missed.">            if (!mMapInitialized &amp;&amp; intent.hasExtra(EXTRA_ROOM)) {</span>
+<span class="nc" id="L208">                showRoomId = intent.getStringExtra(EXTRA_ROOM);</span>
+            }
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">            if (showRoomId != null) {</span>
+<span class="nc" id="L212">                runJs(&quot;IoMap.showLocationById('&quot; + escapeJsString(showRoomId) + &quot;');&quot;);</span>
+            }
+
+<span class="nc" id="L215">            mMapInitialized = true;</span>
+<span class="nc" id="L216">        }</span>
+    };
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

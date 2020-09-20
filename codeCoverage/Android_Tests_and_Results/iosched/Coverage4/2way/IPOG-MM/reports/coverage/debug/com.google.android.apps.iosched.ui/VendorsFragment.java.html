@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VendorsFragment.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui</a> &gt; <span class="el_source">VendorsFragment.java</span></div><h1>VendorsFragment.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.util.ActivityHelper;
+import com.google.android.apps.iosched.util.AnalyticsUtils;
+import com.google.android.apps.iosched.util.NotifyingAsyncQueryHandler;
+
+import android.content.Context;
+import android.content.Intent;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.provider.BaseColumns;
+import androidx.fragment.app.ListFragment;
+import android.text.Spannable;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CursorAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import static com.google.android.apps.iosched.util.UIUtils.buildStyledSnippet;
+
+/**
+ * A {@link ListFragment} showing a list of sandbox comapnies.
+ */
+<span class="fc" id="L47">public class VendorsFragment extends ListFragment implements</span>
+        NotifyingAsyncQueryHandler.AsyncQueryListener {
+
+    private static final String STATE_CHECKED_POSITION = &quot;checkedPosition&quot;;
+
+    private Uri mTrackUri;
+    private Cursor mCursor;
+    private CursorAdapter mAdapter;
+<span class="fc" id="L55">    private int mCheckedPosition = -1;</span>
+<span class="fc" id="L56">    private boolean mHasSetEmptyText = false;</span>
+
+    private NotifyingAsyncQueryHandler mHandler;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L62">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L63">        mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);</span>
+<span class="fc" id="L64">        reloadFromArguments(getArguments());</span>
+<span class="fc" id="L65">    }</span>
+
+    public void reloadFromArguments(Bundle arguments) {
+        // Teardown from previous arguments
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+<span class="nc" id="L70">            getActivity().stopManagingCursor(mCursor);</span>
+<span class="nc" id="L71">            mCursor = null;</span>
+        }
+
+<span class="fc" id="L74">        mCheckedPosition = -1;</span>
+<span class="fc" id="L75">        setListAdapter(null);</span>
+
+<span class="fc" id="L77">        mHandler.cancelOperation(SearchQuery._TOKEN);</span>
+<span class="fc" id="L78">        mHandler.cancelOperation(VendorsQuery._TOKEN);</span>
+
+        // Load new arguments
+<span class="fc" id="L81">        final Intent intent = BaseActivity.fragmentArgumentsToIntent(arguments);</span>
+<span class="fc" id="L82">        final Uri vendorsUri = intent.getData();</span>
+        final int vendorQueryToken;
+
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (vendorsUri == null) {</span>
+<span class="nc" id="L86">            return;</span>
+        }
+
+        String[] projection;
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        if (!ScheduleContract.Vendors.isSearchUri(vendorsUri)) {</span>
+<span class="fc" id="L91">            mAdapter = new VendorsAdapter(getActivity());</span>
+<span class="fc" id="L92">            projection = VendorsQuery.PROJECTION;</span>
+<span class="fc" id="L93">            vendorQueryToken = VendorsQuery._TOKEN;</span>
+
+        } else {
+<span class="nc" id="L96">            Log.d(&quot;VendorsFragment/reloadFromArguments&quot;, &quot;A search URL definitely gets passed in.&quot;);</span>
+<span class="nc" id="L97">            mAdapter = new SearchAdapter(getActivity());</span>
+<span class="nc" id="L98">            projection = SearchQuery.PROJECTION;</span>
+<span class="nc" id="L99">            vendorQueryToken = SearchQuery._TOKEN;</span>
+        }
+
+<span class="fc" id="L102">        setListAdapter(mAdapter);</span>
+
+        // Start background query to load vendors
+<span class="fc" id="L105">        mHandler.startQuery(vendorQueryToken, null, vendorsUri, projection, null, null,</span>
+                ScheduleContract.Vendors.DEFAULT_SORT);
+
+        // If caller launched us with specific track hint, pass it along when
+        // launching vendor details. Also start a query to load the track info.
+<span class="fc" id="L110">        mTrackUri = intent.getParcelableExtra(SessionDetailFragment.EXTRA_TRACK);</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (mTrackUri != null) {</span>
+<span class="nc" id="L112">            mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);</span>
+        }
+<span class="fc" id="L114">    }</span>
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+<span class="fc" id="L118">        super.onActivityCreated(savedInstanceState);</span>
+<span class="fc" id="L119">        getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);</span>
+
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        if (savedInstanceState != null) {</span>
+<span class="nc" id="L122">            mCheckedPosition = savedInstanceState.getInt(STATE_CHECKED_POSITION, -1);</span>
+        }
+
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (!mHasSetEmptyText) {</span>
+            // Could be a bug, but calling this twice makes it become visible when it shouldn't
+            // be visible.
+<span class="fc" id="L128">            setEmptyText(getString(R.string.empty_vendors));</span>
+<span class="fc" id="L129">            mHasSetEmptyText = true;</span>
+        }
+<span class="fc" id="L131">    }</span>
+
+
+    /** {@inheritDoc} */
+    public void onQueryComplete(int token, Object cookie, Cursor cursor) {
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (getActivity() == null) {</span>
+<span class="nc" id="L137">            return;</span>
+        }
+
+<span class="pc bpc" id="L140" title="3 of 4 branches missed.">        if (token == VendorsQuery._TOKEN || token == SearchQuery._TOKEN) {</span>
+<span class="fc" id="L141">            onVendorsOrSearchQueryComplete(cursor);</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        } else if (token == TracksQuery._TOKEN) {</span>
+<span class="nc" id="L143">            onTrackQueryComplete(cursor);</span>
+        } else {
+<span class="nc" id="L145">            cursor.close();</span>
+        }
+<span class="fc" id="L147">    }</span>
+
+    /**
+     * Handle {@link VendorsQuery} {@link Cursor}.
+     */
+    private void onVendorsOrSearchQueryComplete(Cursor cursor) {
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+            // In case cancelOperation() doesn't work and we end up with consecutive calls to this
+            // callback.
+<span class="nc" id="L156">            getActivity().stopManagingCursor(mCursor);</span>
+<span class="nc" id="L157">            mCursor = null;</span>
+        }
+
+        // TODO(romannurik): stopManagingCursor on detach (throughout app)
+<span class="fc" id="L161">        mCursor = cursor;</span>
+<span class="fc" id="L162">        getActivity().startManagingCursor(mCursor);</span>
+<span class="fc" id="L163">        mAdapter.changeCursor(mCursor);</span>
+<span class="pc bpc" id="L164" title="3 of 4 branches missed.">        if (mCheckedPosition &gt;= 0 &amp;&amp; getView() != null) {</span>
+<span class="nc" id="L165">            getListView().setItemChecked(mCheckedPosition, true);</span>
+        }
+<span class="fc" id="L167">    }</span>
+
+    /**
+     * Handle {@link TracksQuery} {@link Cursor}.
+     */
+    private void onTrackQueryComplete(Cursor cursor) {
+        try {
+<span class="nc bnc" id="L174" title="All 2 branches missed.">            if (!cursor.moveToFirst()) {</span>
+<span class="nc" id="L175">                return;</span>
+            }
+
+            // Use found track to build title-bar
+<span class="nc" id="L179">            ActivityHelper activityHelper = ((BaseActivity) getActivity()).getActivityHelper();</span>
+<span class="nc" id="L180">            String trackName = cursor.getString(TracksQuery.TRACK_NAME);</span>
+<span class="nc" id="L181">            activityHelper.setActionBarTitle(trackName);</span>
+<span class="nc" id="L182">            activityHelper.setActionBarColor(cursor.getInt(TracksQuery.TRACK_COLOR));</span>
+
+<span class="nc" id="L184">            AnalyticsUtils.getInstance(getActivity()).trackPageView(&quot;/Sandbox/Track/&quot; + trackName);</span>
+
+        } finally {
+<span class="nc" id="L187">            cursor.close();</span>
+<span class="nc" id="L188">        }</span>
+<span class="nc" id="L189">    }</span>
+
+    @Override
+    public void onResume() {
+<span class="fc" id="L193">        super.onResume();</span>
+<span class="fc" id="L194">        getActivity().getContentResolver().registerContentObserver(</span>
+                ScheduleContract.Vendors.CONTENT_URI, true, mVendorChangesObserver);
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if (mCursor != null) {</span>
+<span class="nc" id="L197">            mCursor.requery();</span>
+        }
+<span class="fc" id="L199">    }</span>
+
+    @Override
+    public void onPause() {
+<span class="fc" id="L203">        super.onPause();</span>
+<span class="fc" id="L204">        getActivity().getContentResolver().unregisterContentObserver(mVendorChangesObserver);</span>
+<span class="fc" id="L205">    }</span>
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+<span class="nc" id="L209">        super.onSaveInstanceState(outState);</span>
+<span class="nc" id="L210">        outState.putInt(STATE_CHECKED_POSITION, mCheckedPosition);</span>
+<span class="nc" id="L211">    }</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public void onListItemClick(ListView l, View v, int position, long id) {
+        // Launch viewer for specific vendor.
+<span class="nc" id="L217">        final Cursor cursor = (Cursor)mAdapter.getItem(position);</span>
+<span class="nc" id="L218">        final String vendorId = cursor.getString(VendorsQuery.VENDOR_ID);</span>
+<span class="nc" id="L219">        final Uri vendorUri = ScheduleContract.Vendors.buildVendorUri(vendorId);</span>
+<span class="nc" id="L220">        ((BaseActivity) getActivity()).openActivityOrFragment(new Intent(Intent.ACTION_VIEW,</span>
+                vendorUri));
+
+<span class="nc" id="L223">        getListView().setItemChecked(position, true);</span>
+<span class="nc" id="L224">        mCheckedPosition = position;</span>
+<span class="nc" id="L225">    }</span>
+
+    public void clearCheckedPosition() {
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if (mCheckedPosition &gt;= 0) {</span>
+<span class="nc" id="L229">            getListView().setItemChecked(mCheckedPosition, false);</span>
+<span class="nc" id="L230">            mCheckedPosition = -1;</span>
+        }
+<span class="nc" id="L232">    }</span>
+
+    /**
+     * {@link CursorAdapter} that renders a {@link VendorsQuery}.
+     */
+    private class VendorsAdapter extends CursorAdapter {
+<span class="fc" id="L238">        public VendorsAdapter(Context context) {</span>
+<span class="fc" id="L239">            super(context, null);</span>
+<span class="fc" id="L240">        }</span>
+
+        /** {@inheritDoc} */
+        @Override
+        public View newView(Context context, Cursor cursor, ViewGroup parent) {
+<span class="nc" id="L245">            return getActivity().getLayoutInflater().inflate(R.layout.list_item_vendor_oneline,</span>
+                    parent, false);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void bindView(View view, Context context, Cursor cursor) {
+<span class="nc" id="L252">            ((TextView) view.findViewById(R.id.vendor_name)).setText(</span>
+<span class="nc" id="L253">                    cursor.getString(VendorsQuery.NAME));</span>
+
+<span class="nc bnc" id="L255" title="All 2 branches missed.">            final boolean starred = cursor.getInt(VendorsQuery.STARRED) != 0;</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            view.findViewById(R.id.star_button).setVisibility(</span>
+                    starred ? View.VISIBLE : View.INVISIBLE);
+<span class="nc" id="L258">        }</span>
+    }
+
+    /**
+     * {@link CursorAdapter} that renders a {@link SearchQuery}.
+     */
+    private class SearchAdapter extends CursorAdapter {
+<span class="nc" id="L265">        public SearchAdapter(Context context) {</span>
+<span class="nc" id="L266">            super(context, null);</span>
+<span class="nc" id="L267">        }</span>
+
+        /** {@inheritDoc} */
+        @Override
+        public View newView(Context context, Cursor cursor, ViewGroup parent) {
+<span class="nc" id="L272">            return getActivity().getLayoutInflater().inflate(R.layout.list_item_vendor, parent,</span>
+                    false);
+        }
+
+        /** {@inheritDoc} */ 
+        @Override
+        public void bindView(View view, Context context, Cursor cursor) {
+<span class="nc" id="L279">            ((TextView) view.findViewById(R.id.vendor_name)).setText(cursor</span>
+<span class="nc" id="L280">                    .getString(SearchQuery.NAME));</span>
+
+<span class="nc" id="L282">            final String snippet = cursor.getString(SearchQuery.SEARCH_SNIPPET);</span>
+<span class="nc" id="L283">            final Spannable styledSnippet = buildStyledSnippet(snippet);</span>
+<span class="nc" id="L284">            ((TextView) view.findViewById(R.id.vendor_location)).setText(styledSnippet);</span>
+
+<span class="nc bnc" id="L286" title="All 2 branches missed.">            final boolean starred = cursor.getInt(VendorsQuery.STARRED) != 0;</span>
+<span class="nc bnc" id="L287" title="All 2 branches missed.">            view.findViewById(R.id.star_button).setVisibility(</span>
+                    starred ? View.VISIBLE : View.INVISIBLE);
+<span class="nc" id="L289">        }</span>
+    }
+
+<span class="fc" id="L292">    private ContentObserver mVendorChangesObserver = new ContentObserver(new Handler()) {</span>
+        @Override
+        public void onChange(boolean selfChange) {
+<span class="nc bnc" id="L295" title="All 2 branches missed.">            if (mCursor != null) {</span>
+<span class="nc" id="L296">                mCursor.requery();</span>
+            }
+<span class="nc" id="L298">        }</span>
+    };
+
+    /**
+     * {@link com.google.android.apps.iosched.provider.ScheduleContract.Vendors} query parameters.
+     */
+    private interface VendorsQuery {
+        int _TOKEN = 0x1;
+
+<span class="fc" id="L307">        String[] PROJECTION = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Vendors.VENDOR_ID,
+                ScheduleContract.Vendors.VENDOR_NAME,
+                ScheduleContract.Vendors.VENDOR_LOCATION,
+                ScheduleContract.Vendors.VENDOR_STARRED,
+        };
+
+        int _ID = 0;
+        int VENDOR_ID = 1;
+        int NAME = 2;
+        int LOCATION = 3;
+        int STARRED = 4;
+    }
+
+    /**
+     * {@link com.google.android.apps.iosched.provider.ScheduleContract.Tracks} query parameters.
+     */
+    private interface TracksQuery {
+        int _TOKEN = 0x2;
+
+<span class="nc" id="L328">        String[] PROJECTION = {</span>
+                ScheduleContract.Tracks.TRACK_NAME,
+                ScheduleContract.Tracks.TRACK_COLOR,
+        };
+
+        int TRACK_NAME = 0;
+        int TRACK_COLOR = 1;
+    }
+
+    /** {@link com.google.android.apps.iosched.provider.ScheduleContract.Vendors} search query
+     * parameters. */
+    private interface SearchQuery {
+        int _TOKEN = 0x3;
+
+<span class="nc" id="L342">        String[] PROJECTION = {</span>
+                BaseColumns._ID,
+                ScheduleContract.Vendors.VENDOR_ID,
+                ScheduleContract.Vendors.VENDOR_NAME,
+                ScheduleContract.Vendors.SEARCH_SNIPPET,
+                ScheduleContract.Vendors.VENDOR_STARRED,
+        };
+
+        int _ID = 0;
+        int VENDOR_ID = 1;
+        int NAME = 2;
+        int SEARCH_SNIPPET = 3;
+        int STARRED = 4;
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VendorsMultiPaneActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=0;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">debugAndroidTest</a> &gt; <a href="index.source.html" class="el_package">com.google.android.apps.iosched.ui.tablet</a> &gt; <span class="el_source">VendorsMultiPaneActivity.java</span></div><h1>VendorsMultiPaneActivity.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.apps.iosched.ui.tablet;
+
+import com.google.android.apps.iosched.R;
+import com.google.android.apps.iosched.provider.ScheduleContract;
+import com.google.android.apps.iosched.ui.BaseMultiPaneActivity;
+import com.google.android.apps.iosched.ui.TracksFragment;
+import com.google.android.apps.iosched.ui.VendorDetailFragment;
+import com.google.android.apps.iosched.ui.VendorsFragment;
+import com.google.android.apps.iosched.ui.phone.VendorDetailActivity;
+import com.google.android.apps.iosched.ui.phone.VendorsActivity;
+
+import android.content.Intent;
+import android.os.Bundle;
+import androidx.fragment.app.FragmentManager;
+import android.view.ViewGroup;
+
+/**
+ * A multi-pane activity, consisting of a {@link TracksDropdownFragment}, a
+ * {@link VendorsFragment}, and {@link VendorDetailFragment}. This activity is very similar in
+ * function to {@link SessionsMultiPaneActivity}.
+ *
+ * This activity requires API level 11 or greater because {@link TracksDropdownFragment} requires
+ * API level 11.
+ */
+<span class="nc" id="L41">public class VendorsMultiPaneActivity extends BaseMultiPaneActivity {</span>
+
+    private TracksDropdownFragment mTracksDropdownFragment;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L47">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L48">        setContentView(</span>
+                R.layout.activity_vendors);
+
+<span class="nc" id="L51">        Intent intent = new Intent();</span>
+<span class="nc" id="L52">        intent.setData(ScheduleContract.Tracks.CONTENT_URI);</span>
+<span class="nc" id="L53">        intent.putExtra(TracksFragment.EXTRA_NEXT_TYPE, TracksFragment.NEXT_TYPE_VENDORS);</span>
+
+<span class="nc" id="L55">        final FragmentManager fm = getSupportFragmentManager();</span>
+<span class="nc" id="L56">        mTracksDropdownFragment = (TracksDropdownFragment) fm.findFragmentById(</span>
+                R.id.fragment_tracks_dropdown);
+<span class="nc" id="L58">        mTracksDropdownFragment.reloadFromArguments(intentToFragmentArguments(intent));</span>
+<span class="nc" id="L59">    }</span>
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+<span class="nc" id="L63">        super.onPostCreate(savedInstanceState);</span>
+<span class="nc" id="L64">        getActivityHelper().setupSubActivity();</span>
+
+<span class="nc" id="L66">        ViewGroup detailContainer = (ViewGroup)</span>
+<span class="nc" id="L67">                findViewById(R.id.fragment_container_vendor_detail);</span>
+<span class="nc bnc" id="L68" title="All 4 branches missed.">        if (detailContainer != null &amp;&amp; detailContainer.getChildCount() &gt; 0) {</span>
+<span class="nc" id="L69">            findViewById(R.id.fragment_container_vendor_detail).setBackgroundColor(0xffffffff);</span>
+        }
+<span class="nc" id="L71">    }</span>
+
+    @Override
+    public FragmentReplaceInfo onSubstituteFragmentForActivityLaunch(String activityClassName) {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (VendorsActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L76">            return new FragmentReplaceInfo(</span>
+                    VendorsFragment.class,
+                    &quot;vendors&quot;,
+                    R.id.fragment_container_vendors);
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        } else if (VendorDetailActivity.class.getName().equals(activityClassName)) {</span>
+<span class="nc" id="L81">            findViewById(R.id.fragment_container_vendor_detail).setBackgroundColor(</span>
+                    0xffffffff);
+<span class="nc" id="L83">            return new FragmentReplaceInfo(</span>
+                    VendorDetailFragment.class,
+                    &quot;vendor_detail&quot;,
+                    R.id.fragment_container_vendor_detail);
+        }
+<span class="nc" id="L88">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span>Generated by the Android Gradle plugin 3.5.2</div></body></html>
