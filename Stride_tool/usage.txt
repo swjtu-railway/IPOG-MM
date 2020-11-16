@@ -1,0 +1,36 @@
+
+
+==========================	
+1. input arguments
+==========================	
+input file path = args[0];	//the path where all sut locate
+strength = args[1];		//strength: {2, 3, 4, 5, 6}
+algo_switch = args[2];	//algo_switch: {1,2}. Choosing 1 is to apply IPOG/IPOG-PO; Choosing 2 is to apply IPOG-MM
+sut = args[3];			//sut: {cyclos, iosched, k9mail, NotePad, OpenManager}
+Coverage = args[4];		//path coverage: {overage2, Coverage3, Coverage4, Coverage 21};
+group = args[5];		//group: {group0, group1, group2, group3, group4, group5}. 
+// group1 to group5 are for constrained experiments , group0 is for unconstrained experiments
+
+
+==========================	
+2. Note		
+==========================	
+Note 1: The test generation results are output to the input file path			
+Note 2: Please do not change the file folder structures, or exceptions may be reported.
+
+
+==========================	
+3. Usage example (in windows command line environment)
+==========================	
+unconstrained test generation:
+java -jar stride.jar D:\Stride\unconstrained 2 1 NotePad Coverage2 group0
+
+constrained test generation:
+java -jar stride.jar D:\Stride\constrained 3 2 cyclos Coverage2 group1
+
+
+==========================	
+4. Others
+==========================	
+If you have any questions about the stride tool, please contact with the IPOG-MM team (changrao@my.swjtu.edu.cn).
+Thank you!
